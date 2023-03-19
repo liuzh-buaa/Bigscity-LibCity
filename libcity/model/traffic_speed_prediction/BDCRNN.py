@@ -477,16 +477,12 @@ class BDCRNN(AbstractTrafficStateModel, Seq2SeqAttrs):
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mae_torch(y_predicted, y_true, 0)
 
-    def predict(self, batch, batches_seen=None, rep=1):
-        if rep == 1:
-            return self.forward(batch, batches_seen)
-        output = 0
-        for i in range(rep):
-            output += self.forward(batch, batches_seen).detach().clone()
-        return output
+    def predict(self, batch, batches_seen=None):
+        return self.forward(batch, batches_seen)
 
 
 if __name__ == '__main__':
     GCONV(207, 2, [torch.randn(207, 207, device='cuda:0'), torch.randn(207, 207, device='cuda:0')], 'cuda:0',
           input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
     FC(207, 'cuda:0', input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
+    print(torch.mean(torch.stack([torch.randn(3, 4, 5) for i in range(5)]), dim=0).shape)
