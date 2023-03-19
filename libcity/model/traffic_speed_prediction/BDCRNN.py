@@ -478,9 +478,11 @@ class BDCRNN(AbstractTrafficStateModel, Seq2SeqAttrs):
         return loss.masked_mae_torch(y_predicted, y_true, 0)
 
     def predict(self, batch, batches_seen=None, rep=1):
+        if rep == 1:
+            return self.forward(batch, batches_seen)
         output = 0
         for i in range(rep):
-            output += self.forward(batch, batches_seen)
+            output += self.forward(batch, batches_seen).detach().clone()
         return output
 
 

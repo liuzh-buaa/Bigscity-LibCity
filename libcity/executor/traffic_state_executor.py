@@ -255,7 +255,7 @@ class TrafficStateExecutor(AbstractExecutor):
             y_preds = []
             for batch in test_dataloader:
                 batch.to_tensor(self.device)
-                output = self.model.predict(batch)
+                output = self.model.predict(batch, rep=10)
                 y_true = self._scaler.inverse_transform(batch['y'][..., :self.output_dim])
                 y_pred = self._scaler.inverse_transform(output[..., :self.output_dim])
                 y_truths.append(y_true.cpu().numpy())
