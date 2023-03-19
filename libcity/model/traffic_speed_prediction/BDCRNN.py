@@ -360,7 +360,7 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         return output, torch.stack(hidden_states)
 
 
-class DCRNN(AbstractTrafficStateModel, Seq2SeqAttrs):
+class BDCRNN(AbstractTrafficStateModel, Seq2SeqAttrs):
     def __init__(self, config, data_feature):
         self.adj_mx = data_feature.get('adj_mx')
         self.num_nodes = data_feature.get('num_nodes', 1)

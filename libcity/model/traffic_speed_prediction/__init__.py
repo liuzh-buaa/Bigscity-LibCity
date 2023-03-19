@@ -1,5 +1,5 @@
-# from libcity.model.traffic_speed_prediction.DCRNN import DCRNN
-from libcity.model.traffic_speed_prediction.BDCRNN import DCRNN
+from libcity.model.traffic_speed_prediction.DCRNN import DCRNN
+from libcity.model.traffic_speed_prediction.BDCRNN import BDCRNN
 from libcity.model.traffic_speed_prediction.STGCN import STGCN
 from libcity.model.traffic_speed_prediction.GWNET import GWNET
 from libcity.model.traffic_speed_prediction.MTGNN import MTGNN
@@ -20,7 +20,7 @@ from libcity.model.traffic_speed_prediction.STTN import STTN
 from libcity.model.traffic_speed_prediction.FNN import FNN
 
 __all__ = [
-    # "DCRNN",
+    "DCRNN",
     "BDCRNN",
     "STGCN",
     "GWNET",

@@ -83,6 +83,7 @@
     },
     "traffic_state_pred": {
         "allowed_model": [
+            "BDCRNN",
             "DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
             "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet", "RNN", "LSTM", "GRU", "AutoEncoder", "Seq2Seq",
             "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon", "ToGCN", "CONVGCN", "STG2Seq",
@@ -100,6 +101,11 @@
             "NYCTAXI_OD", "NYCTAXI_GRID", "T_DRIVE_SMALL", "NYCBIKE", "AUSTINRIDE",
             "BIKEDC", "BIKECHI", "NYC_RISK", "CHICAGO_RISK"
         ],
+        "BDCRNN": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "DCRNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
         "DCRNN": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "DCRNNExecutor",
