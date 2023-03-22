@@ -63,7 +63,7 @@ def count_parameters(model):
 
 class GCONV(nn.Module):
     def __init__(self, num_nodes, max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, bias_start=0.0,
-                 sigma_pi=1.0, sigma_start=1.0, sigma_0=1.0):
+                 sigma_pi=1.0, sigma_start=1.0):
         super(GCONV, self).__init__()
         self._num_nodes = num_nodes
         self._max_diffusion_step = max_diffusion_step
@@ -72,7 +72,6 @@ class GCONV(nn.Module):
         self._num_matrices = len(self._supports) * self._max_diffusion_step + 1  # Ks
         self._output_dim = output_dim
         self._sigma_pi = sigma_pi
-        self._sigma_0 = sigma_0
         input_size = input_dim + hid_dim
         shape = (input_size * self._num_matrices, self._output_dim)
         self.mu_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
@@ -140,16 +139,22 @@ class GCONV(nn.Module):
         # Reshape res back to 2D: (batch_size * num_nodes, state_dim) -> (batch_size, num_nodes * state_dim)
         return torch.reshape(x, [batch_size, self._num_nodes * self._output_dim])
 
+    def get_kl_sum(self):
+        kl_weight = math.log(self._sigma_pi) - self.log_sigma_weight + 0.5 * (
+                torch.exp(self.log_sigma_weight) ** 2 + self.mu_weight ** 2) / (self._sigma_pi ** 2)
+        kl_bias = math.log(self._sigma_pi) - self.log_sigma_bias + 0.5 * (
+                torch.exp(self.log_sigma_bias) ** 2 + self.mu_bias ** 2) / (self._sigma_pi ** 2)
+        return kl_weight.sum() + kl_bias.sum()
+
 
 class FC(nn.Module):
     def __init__(self, num_nodes, device, input_dim, hid_dim, output_dim, bias_start=0.0,
-                 sigma_pi=1.0, sigma_start=1.0, sigma_0=1.0):
+                 sigma_pi=1.0, sigma_start=1.0):
         super(FC, self).__init__()
         self._num_nodes = num_nodes
         self._device = device
         self._output_dim = output_dim
         self._sigma_pi = sigma_pi
-        self._sigma_0 = sigma_0
         input_size = input_dim + hid_dim
         shape = (input_size, self._output_dim)
         self.mu_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
@@ -182,10 +187,17 @@ class FC(nn.Module):
         # Reshape res back to 2D: (batch_size * num_nodes, state_dim) -> (batch_size, num_nodes * state_dim)
         return torch.reshape(value, [batch_size, self._num_nodes * self._output_dim])
 
+    def get_kl_sum(self):
+        kl_weight = math.log(self._sigma_pi) - self.log_sigma_weight + 0.5 * (
+                torch.exp(self.log_sigma_weight) ** 2 + self.mu_weight ** 2) / (self._sigma_pi ** 2)
+        kl_bias = math.log(self._sigma_pi) - self.log_sigma_bias + 0.5 * (
+                torch.exp(self.log_sigma_bias) ** 2 + self.mu_bias ** 2) / (self._sigma_pi ** 2)
+        return kl_weight.sum() + kl_bias.sum()
+
 
 class DCGRUCell(nn.Module):
     def __init__(self, input_dim, num_units, adj_mx, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
-                 filter_type="laplacian", use_gc_for_ru=True, sigma_pi=1.0, sigma_start=1.0, sigma_0=1.0):
+                 filter_type="laplacian", use_gc_for_ru=True, sigma_pi=1.0, sigma_start=1.0):
         """
 
         Args:
@@ -225,14 +237,14 @@ class DCGRUCell(nn.Module):
         if self._use_gc_for_ru:
             self._fn = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
                              input_dim=input_dim, hid_dim=self._num_units, output_dim=2 * self._num_units,
-                             bias_start=1.0, sigma_pi=sigma_pi, sigma_start=sigma_start, sigma_0=sigma_0)
+                             bias_start=1.0, sigma_pi=sigma_pi, sigma_start=sigma_start)
         else:
             self._fn = FC(self._num_nodes, self._device, input_dim=input_dim,
                           hid_dim=self._num_units, output_dim=2 * self._num_units, bias_start=1.0,
-                          sigma_pi=sigma_pi, sigma_start=sigma_start, sigma_0=sigma_0)
+                          sigma_pi=sigma_pi, sigma_start=sigma_start)
         self._gconv = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
                             input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0,
-                            sigma_pi=sigma_pi, sigma_start=sigma_start, sigma_0=sigma_0)
+                            sigma_pi=sigma_pi, sigma_start=sigma_start)
 
     @staticmethod
     def _build_sparse_matrix(lap, device):
@@ -269,6 +281,9 @@ class DCGRUCell(nn.Module):
         new_state = u * hx + (1.0 - u) * c
         return new_state  # (batch_size, num_nodes * _num_units)
 
+    def get_kl_sum(self):
+        return self._fn.get_kl_sum() + self._gconv.get_kl_sum()
+
 
 class Seq2SeqAttrs:
     def __init__(self, config, adj_mx):
@@ -294,12 +309,11 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
         self.dcgru_layers = nn.ModuleList()
         self.dcgru_layers.append(DCGRUCell(self.input_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
                                            self.num_nodes, self.device, filter_type=self.filter_type,
-                                           sigma_pi=self.sigma_pi, sigma_start=self.sigma_start, sigma_0=self.sigma_0))
+                                           sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
         for i in range(1, self.num_rnn_layers):
             self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
                                                self.num_nodes, self.device, filter_type=self.filter_type,
-                                               sigma_pi=self.sigma_pi, sigma_start=self.sigma_start,
-                                               sigma_0=self.sigma_0))
+                                               sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
 
     def forward(self, inputs, hidden_state=None):
         """
@@ -329,6 +343,12 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
             output = next_hidden_state  # 循环
         return output, torch.stack(hidden_states)  # runs in O(num_layers) so not too slow
 
+    def get_kl_sum(self):
+        kl_sum = 0
+        for dcgru_layer in self.dcgru_layers:
+            kl_sum += dcgru_layer.get_kl_sum()
+        return kl_sum
+
 
 class DecoderModel(nn.Module, Seq2SeqAttrs):
     def __init__(self, config, adj_mx):
@@ -339,12 +359,11 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         self.dcgru_layers = nn.ModuleList()
         self.dcgru_layers.append(DCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
                                            self.num_nodes, self.device, filter_type=self.filter_type,
-                                           sigma_pi=self.sigma_pi, sigma_start=self.sigma_start, sigma_0=self.sigma_0))
+                                           sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
         for i in range(1, self.num_rnn_layers):
             self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
                                                self.num_nodes, self.device, filter_type=self.filter_type,
-                                               sigma_pi=self.sigma_pi, sigma_start=self.sigma_start,
-                                               sigma_0=self.sigma_0))
+                                               sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
 
     def forward(self, inputs, hidden_state=None):
         """
@@ -371,6 +390,12 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         projected = self.projection_layer(output.view(-1, self.rnn_units))
         output = projected.view(-1, self.num_nodes * self.output_dim)
         return output, torch.stack(hidden_states)
+
+    def get_kl_sum(self):
+        kl_sum = 0
+        for dcgru_layer in self.dcgru_layers:
+            kl_sum += dcgru_layer.get_kl_sum()
+        return kl_sum
 
 
 class BDCRNNRegConstant(AbstractTrafficStateModel, Seq2SeqAttrs):
@@ -488,10 +513,13 @@ class BDCRNNRegConstant(AbstractTrafficStateModel, Seq2SeqAttrs):
         y_predicted = self.predict(batch, batches_seen)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        return loss.masked_mae_torch(y_predicted, y_true, 0)
+        return loss.masked_mae_torch(y_predicted, y_true, 0) + 2 * (self.sigma_0 ** 2) * self._get_kl_sum()
 
     def predict(self, batch, batches_seen=None):
         return self.forward(batch, batches_seen)
+
+    def _get_kl_sum(self):
+        return self.encoder_model.get_kl_sum() + self.decoder_model.get_kl_sum()
 
 
 if __name__ == '__main__':
