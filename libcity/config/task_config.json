@@ -83,7 +83,7 @@
     },
     "traffic_state_pred": {
         "allowed_model": [
-            "BDCRNN", "BDCRNNRegConstant",
+            "BDCRNN", "BDCRNNRegConstant", "BDCRNNRegConstantShared",
             "DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
             "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet", "RNN", "LSTM", "GRU", "AutoEncoder", "Seq2Seq",
             "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon", "ToGCN", "CONVGCN", "STG2Seq",
@@ -107,6 +107,11 @@
             "evaluator": "TrafficStateEvaluator"
         },
         "BDCRNNRegConstant": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "DCRNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "BDCRNNRegConstantShared": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "DCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
