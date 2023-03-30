@@ -103,27 +103,27 @@
         ],
         "BDCRNN": {
             "dataset_class": "TrafficStatePointDataset",
-            "executor": "DCRNNExecutor",
+            "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
         "BDCRNNRegConstant": {
             "dataset_class": "TrafficStatePointDataset",
-            "executor": "DCRNNExecutor",
+            "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
         "BDCRNNRegConstantShared": {
             "dataset_class": "TrafficStatePointDataset",
-            "executor": "DCRNNExecutor",
+            "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
         "BDCRNNRegVariable": {
             "dataset_class": "TrafficStatePointDataset",
-            "executor": "DCRNNExecutor",
+            "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
         "BDCRNNRegVariableShared": {
             "dataset_class": "TrafficStatePointDataset",
-            "executor": "DCRNNExecutor",
+            "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
         "DCRNN": {

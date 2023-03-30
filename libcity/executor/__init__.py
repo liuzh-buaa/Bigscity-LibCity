@@ -1,4 +1,5 @@
 from libcity.executor.dcrnn_executor import DCRNNExecutor
+from libcity.executor.bdcrnn_executor import BDCRNNExecutor
 from libcity.executor.geml_executor import GEMLExecutor
 from libcity.executor.geosan_executor import GeoSANExecutor
 from libcity.executor.hyper_tuning import HyperTuning
@@ -16,6 +17,7 @@ __all__ = [
     "TrajLocPredExecutor",
     "TrafficStateExecutor",
     "DCRNNExecutor",
+    "BDCRNNExecutor",
     "MTGNNExecutor",
     "HyperTuning",
     "GeoSANExecutor",
