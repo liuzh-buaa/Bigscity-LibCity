@@ -75,6 +75,8 @@ class TrafficStateExecutor(AbstractExecutor):
             self.load_model_with_epoch(self._epoch_num)
         self.loss_func = self._build_train_loss()
 
+        self.evaluate_rep = self.config.get('evaluate_rep', 1)
+
     def save_model(self, cache_name):
         """
         将当前的模型保存到文件
@@ -256,7 +258,8 @@ class TrafficStateExecutor(AbstractExecutor):
             y_preds = []
             for batch in test_dataloader:
                 batch.to_tensor(self.device)
-                output = torch.mean(torch.stack([self.model.predict(batch).detach().clone() for _ in range(5)]), dim=0)
+                output = torch.mean(
+                    torch.stack([self.model.predict(batch).detach().clone() for _ in range(self.evaluate_rep)]), dim=0)
                 y_true = self._scaler.inverse_transform(batch['y'][..., :self.output_dim])
                 y_pred = self._scaler.inverse_transform(output[..., :self.output_dim])
                 y_truths.append(y_true.cpu().numpy())

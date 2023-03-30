@@ -27,5 +27,7 @@
   "patience": 50,
 
   "sigma_pi": 0.1,
-  "sigma_start": 0.1
+  "sigma_start": 0.1,
+
+  "evaluate_rep": 30
 }
