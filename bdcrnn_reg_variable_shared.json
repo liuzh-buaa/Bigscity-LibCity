@@ -1,0 +1,29 @@
+{
+  "learning_rate": {
+    "type": "choice",
+    "list": [
+      0.02,
+      0.01,
+      0.005,
+      0.001
+    ]
+  },
+  "sigma_pi": {
+    "type": "choice",
+    "list": [
+      0.01,
+      0.05,
+      0.1,
+      0.15
+    ]
+  },
+  "sigma_start": {
+    "type": "choice",
+    "list": [
+      0.01,
+      0.05,
+      0.1,
+      0.15
+    ]
+  }
+}
