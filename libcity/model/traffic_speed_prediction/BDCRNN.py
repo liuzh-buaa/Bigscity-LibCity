@@ -491,7 +491,9 @@ class BDCRNN(AbstractTrafficStateModel, Seq2SeqAttrs):
 
 
 if __name__ == '__main__':
-    GCONV(207, 2, [torch.randn(207, 207, device='cuda:0'), torch.randn(207, 207, device='cuda:0')], 'cuda:0',
-          input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
-    FC(207, 'cuda:0', input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
-    print(torch.mean(torch.stack([torch.randn(3, 4, 5) for i in range(5)]), dim=0).shape)
+    # GCONV(207, 2, [torch.randn(207, 207, device='cuda:0'), torch.randn(207, 207, device='cuda:0')], 'cuda:0',
+    #       input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
+    # FC(207, 'cuda:0', input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
+    # print(torch.mean(torch.stack([torch.randn(3, 4, 5) for i in range(5)]), dim=0).shape)
+    x = torch.tensor([0, float('nan')])
+    print(torch.isnan(x))

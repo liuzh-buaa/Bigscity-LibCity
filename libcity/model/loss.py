@@ -14,7 +14,7 @@ def masked_mae_loss(y_pred, y_true):
     return loss.mean()
 
 
-def masked_mae_torch(preds, labels, null_val=np.nan, sigma_0=1.0):
+def masked_mae_torch(preds, labels, null_val=np.nan):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -26,8 +26,30 @@ def masked_mae_torch(preds, labels, null_val=np.nan, sigma_0=1.0):
     loss = torch.abs(torch.sub(preds, labels))
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
-    loss /= sigma_0
     return torch.mean(loss)
+
+
+def masked_mae_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
+    labels[torch.abs(labels) < 1e-4] = 0
+    if np.isnan(null_val):
+        mask = ~torch.isnan(labels)
+    else:
+        mask = labels.ne(null_val)
+    mask = mask.float()
+    mask /= torch.mean(mask)
+    mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
+
+    sigma_0 = torch.exp(log_sigma_0)
+    loss = torch.abs(torch.sub(preds, labels)) / torch.mul(sigma_0, sigma_0)
+    loss = loss * mask
+    loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
+
+    log_sigma_0 = log_sigma_0 * mask
+    log_sigma_0 = torch.where(torch.isnan(loss), torch.zeros_like(log_sigma_0), log_sigma_0)
+
+    valid_size = torch.sum(torch.where(torch.isnan(loss), torch.zeros_like(loss), torch.ones_like(loss)))
+
+    return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 
 
 def log_cosh_loss(preds, labels):

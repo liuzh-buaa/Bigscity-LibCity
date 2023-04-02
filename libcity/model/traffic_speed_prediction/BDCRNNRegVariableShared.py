@@ -637,9 +637,7 @@ class BDCRNNRegVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         log_sigma_0 = self.forward_sigma(batch, batches_seen)
-        sigma_0 = torch.exp(log_sigma_0)
-        return loss.masked_mae_torch(y_predicted, y_true, 0,
-                                     torch.mul(sigma_0, sigma_0)) + torch.sum(log_sigma_0) + self._get_kl_sum()
+        return loss.masked_mae_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum(), 0)
 
     def calculate_eval_loss(self, batch, batches_seen=None):
         y_true = batch['y']
