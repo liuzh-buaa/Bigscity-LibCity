@@ -1,3 +1,5 @@
+import math
+
 import torch
 import numpy as np
 from sklearn.metrics import r2_score, explained_variance_score
@@ -39,7 +41,10 @@ def masked_mae_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
     mask /= torch.mean(mask)
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
 
-    sigma_0 = torch.exp(log_sigma_0)
+    try:
+        sigma_0 = torch.exp(log_sigma_0)
+    except TypeError:
+        sigma_0 = torch.ones_like(preds) * math.exp(log_sigma_0)
     loss = torch.abs(torch.sub(preds, labels)) / torch.mul(sigma_0, sigma_0)
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
