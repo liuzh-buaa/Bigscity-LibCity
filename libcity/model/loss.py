@@ -52,7 +52,7 @@ def masked_mae_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
     log_sigma_0 = log_sigma_0 * mask
     log_sigma_0 = torch.where(torch.isnan(loss), torch.zeros_like(log_sigma_0), log_sigma_0)
 
-    valid_size = torch.sum(torch.where(torch.isnan(loss), torch.zeros_like(loss), torch.ones_like(loss)))
+    valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(loss), torch.ones_like(loss)))
 
     return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 

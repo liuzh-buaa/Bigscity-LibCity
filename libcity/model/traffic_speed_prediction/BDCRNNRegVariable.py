@@ -581,7 +581,8 @@ class BDCRNNRegVariable(AbstractTrafficStateModel, Seq2SeqAttrs):
         return self.forward(batch, batches_seen)
 
     def _get_kl_sum(self):
-        return self.encoder_model.get_kl_sum() + self.decoder_model.get_kl_sum()
+        return self.encoder_model.get_kl_sum() + self.decoder_model.get_kl_sum() + \
+               self.encoder_sigma_model.get_kl_sum() + self.decoder_sigma_model.get_kl_sum()
 
 
 if __name__ == '__main__':
