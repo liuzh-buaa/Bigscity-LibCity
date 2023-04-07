@@ -370,6 +370,8 @@ class Seq2SeqAttrs:
         self.device = config.get('device', torch.device('cpu'))
         self.sigma_pi = float(config.get('sigma_pi'))
         self.sigma_start = float(config.get('sigma_start'))
+        self.sigma_sigma_pi = float(config.get('sigma_sigma_pi'))
+        self.sigma_sigma_start = float(config.get('sigma_sigma_start'))
 
 
 class EncoderModel(nn.Module, Seq2SeqAttrs):
@@ -469,6 +471,103 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         return kl_sum
 
 
+class EncoderSigmaModel(nn.Module, Seq2SeqAttrs):
+    def __init__(self, config, adj_mx):
+        nn.Module.__init__(self)
+        Seq2SeqAttrs.__init__(self, config, adj_mx)
+        self.dcgru_layers = nn.ModuleList()
+        self.dcgru_layers.append(DCGRUCell(self.input_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
+                                           self.num_nodes, self.device, filter_type=self.filter_type,
+                                           sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
+        for i in range(1, self.num_rnn_layers):
+            self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
+                                               self.num_nodes, self.device, filter_type=self.filter_type,
+                                               sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
+
+    def forward(self, inputs, hidden_state=None):
+        """
+        Encoder forward pass.
+
+        Args:
+            inputs: shape (batch_size, self.num_nodes * self.input_dim)
+            hidden_state: (num_layers, batch_size, self.hidden_state_size),
+                optional, zeros if not provided, hidden_state_size = num_nodes * rnn_units
+
+        Returns:
+            tuple: tuple contains:
+                output: shape (batch_size, self.hidden_state_size) \n
+                hidden_state: shape (num_layers, batch_size, self.hidden_state_size) \n
+                (lower indices mean lower layers)
+
+        """
+        batch_size, _ = inputs.size()
+        if hidden_state is None:
+            hidden_state = torch.zeros((self.num_rnn_layers, batch_size, self.hidden_state_size), device=self.device)
+        hidden_states = []
+        output = inputs
+        for layer_num, dcgru_layer in enumerate(self.dcgru_layers):
+            next_hidden_state = dcgru_layer(output, hidden_state[layer_num])
+            # next_hidden_state: (batch_size, self.num_nodes * self.rnn_units)
+            hidden_states.append(next_hidden_state)
+            output = next_hidden_state  # 循环
+        return output, torch.stack(hidden_states)  # runs in O(num_layers) so not too slow
+
+    def get_kl_sum(self):
+        kl_sum = 0
+        for dcgru_layer in self.dcgru_layers:
+            kl_sum += dcgru_layer.get_kl_sum()
+        return kl_sum
+
+
+class DecoderSigmaModel(nn.Module, Seq2SeqAttrs):
+    def __init__(self, config, adj_mx):
+        nn.Module.__init__(self)
+        Seq2SeqAttrs.__init__(self, config, adj_mx)
+        self.output_dim = config.get('output_dim', 1)
+        self.projection_layer = RandLinear(self.rnn_units, self.output_dim, self.device,
+                                           sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start)
+        self.dcgru_layers = nn.ModuleList()
+        self.dcgru_layers.append(DCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
+                                           self.num_nodes, self.device, filter_type=self.filter_type,
+                                           sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
+        for i in range(1, self.num_rnn_layers):
+            self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
+                                               self.num_nodes, self.device, filter_type=self.filter_type,
+                                               sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
+
+    def forward(self, inputs, hidden_state=None):
+        """
+        Decoder forward pass.
+
+        Args:
+            inputs:  shape (batch_size, self.num_nodes * self.output_dim)
+            hidden_state: (num_layers, batch_size, self.hidden_state_size),
+                optional, zeros if not provided, hidden_state_size = num_nodes * rnn_units
+
+        Returns:
+            tuple: tuple contains:
+                output: shape (batch_size, self.num_nodes * self.output_dim) \n
+                hidden_state: shape (num_layers, batch_size, self.hidden_state_size) \n
+                (lower indices mean lower layers)
+        """
+        hidden_states = []
+        output = inputs
+        for layer_num, dcgru_layer in enumerate(self.dcgru_layers):
+            next_hidden_state = dcgru_layer(output, hidden_state[layer_num])
+            # next_hidden_state: (batch_size, self.num_nodes * self.rnn_units)
+            hidden_states.append(next_hidden_state)
+            output = next_hidden_state
+        projected = self.projection_layer(output.view(-1, self.rnn_units))
+        output = projected.view(-1, self.num_nodes * self.output_dim)
+        return output, torch.stack(hidden_states)
+
+    def get_kl_sum(self):
+        kl_sum = self.projection_layer.get_kl_sum()
+        for dcgru_layer in self.dcgru_layers:
+            kl_sum += dcgru_layer.get_kl_sum()
+        return kl_sum
+
+
 class BDCRNNRegVariable(AbstractTrafficStateModel, Seq2SeqAttrs):
     def __init__(self, config, data_feature):
         self.adj_mx = data_feature.get('adj_mx')
@@ -483,10 +582,8 @@ class BDCRNNRegVariable(AbstractTrafficStateModel, Seq2SeqAttrs):
         self.encoder_model = EncoderModel(config, self.adj_mx)
         self.decoder_model = DecoderModel(config, self.adj_mx)
 
-        self.sigma_pi = float(config.get('sigma_pi2'))
-        self.sigma_start = float(config.get('sigma_start2'))
-        self.encoder_sigma_model = EncoderModel(config, self.adj_mx)
-        self.decoder_sigma_model = DecoderModel(config, self.adj_mx)
+        self.encoder_sigma_model = EncoderSigmaModel(config, self.adj_mx)
+        self.decoder_sigma_model = DecoderSigmaModel(config, self.adj_mx)
 
         self.use_curriculum_learning = config.get('use_curriculum_learning', False)
         self.input_window = config.get('input_window', 1)
