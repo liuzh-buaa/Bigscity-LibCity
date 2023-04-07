@@ -31,5 +31,7 @@
   "sigma_pi2": 1,
   "sigma_start2": 0.01,
 
-  "evaluate_rep": 30
+  "evaluate_rep": 30,
+
+  "init_params_from_dcrnn": false
 }

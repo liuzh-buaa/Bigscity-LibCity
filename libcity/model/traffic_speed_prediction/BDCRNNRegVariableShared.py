@@ -10,6 +10,8 @@ from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model import loss
 import torch.nn.functional as F
 
+from libcity.model.covert_dcrnn_to_b import convert_dcrnn_to_bdcrnn
+
 
 def calculate_normalized_laplacian(adj):
     """
@@ -564,6 +566,9 @@ class BDCRNNRegVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         self.device = config.get('device', torch.device('cpu'))
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
+
+        if config['init_params_from_dcrnn']:
+            convert_dcrnn_to_bdcrnn(self, self.device)
 
     def _compute_sampling_threshold(self, batches_seen):
         return self.cl_decay_steps / (
