@@ -8,6 +8,7 @@ import torch.nn as nn
 from logging import getLogger
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model import loss
+import torch.nn.functional as F
 
 
 def calculate_normalized_laplacian(adj):
@@ -75,15 +76,15 @@ class GCONV(nn.Module):
         input_size = input_dim + hid_dim
         shape = (input_size * self._num_matrices, self._output_dim)
         self.mu_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
-        self.mu_bias = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
+        self.mu_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
         self.log_sigma_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
-        self.log_sigma_bias = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
+        self.log_sigma_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
         self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
         self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
         torch.nn.init.xavier_normal_(self.mu_weight)
-        torch.nn.init.constant_(self.mu_bias, bias_start)
+        torch.nn.init.constant_(self.mu_biases, bias_start)
         torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
-        torch.nn.init.constant_(self.log_sigma_bias, math.log(sigma_start))
+        torch.nn.init.constant_(self.log_sigma_biases, math.log(sigma_start))
         torch.nn.init.constant_(self.buffer_eps_weight, 0)
         torch.nn.init.constant_(self.buffer_eps_bias, 0)
         self.shared_eps = False
@@ -137,11 +138,11 @@ class GCONV(nn.Module):
         else:
             weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
         x = torch.matmul(x, weight)  # (batch_size * self._num_nodes, self._output_dim)
-        sigma_bias = torch.exp(self.log_sigma_bias)
+        sigma_bias = torch.exp(self.log_sigma_biases)
         if self.shared_eps:
-            bias = self.mu_bias + sigma_bias * self.buffer_eps_bias
+            bias = self.mu_biases + sigma_bias * self.buffer_eps_bias
         else:
-            bias = self.mu_bias + sigma_bias * torch.randn(self.mu_bias.shape, device=self._device)
+            bias = self.mu_biases + sigma_bias * torch.randn(self.mu_biases.shape, device=self._device)
         x = x + bias
         # Reshape res back to 2D: (batch_size * num_nodes, state_dim) -> (batch_size, num_nodes * state_dim)
         return torch.reshape(x, [batch_size, self._num_nodes * self._output_dim])
@@ -149,8 +150,8 @@ class GCONV(nn.Module):
     def get_kl_sum(self):
         kl_weight = math.log(self._sigma_pi) - self.log_sigma_weight + 0.5 * (
                 torch.exp(self.log_sigma_weight) ** 2 + self.mu_weight ** 2) / (self._sigma_pi ** 2)
-        kl_bias = math.log(self._sigma_pi) - self.log_sigma_bias + 0.5 * (
-                torch.exp(self.log_sigma_bias) ** 2 + self.mu_bias ** 2) / (self._sigma_pi ** 2)
+        kl_bias = math.log(self._sigma_pi) - self.log_sigma_biases + 0.5 * (
+                torch.exp(self.log_sigma_biases) ** 2 + self.mu_biases ** 2) / (self._sigma_pi ** 2)
         return kl_weight.sum() + kl_bias.sum()
 
     def set_shared_eps(self):
@@ -173,15 +174,15 @@ class FC(nn.Module):
         input_size = input_dim + hid_dim
         shape = (input_size, self._output_dim)
         self.mu_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
-        self.mu_bias = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
+        self.mu_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
         self.log_sigma_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
-        self.log_sigma_bias = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
+        self.log_sigma_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
         self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
         self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
         torch.nn.init.xavier_normal_(self.mu_weight)
-        torch.nn.init.constant_(self.mu_bias, bias_start)
+        torch.nn.init.constant_(self.mu_biases, bias_start)
         torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
-        torch.nn.init.constant_(self.log_sigma_bias, math.log(sigma_start))
+        torch.nn.init.constant_(self.log_sigma_biases, math.log(sigma_start))
         torch.nn.init.constant_(self.buffer_eps_weight, 0)
         torch.nn.init.constant_(self.buffer_eps_bias, 0)
         self.shared_eps = False
@@ -200,11 +201,11 @@ class FC(nn.Module):
             weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
         value = torch.sigmoid(torch.matmul(inputs_and_state, weight))
         # (batch_size * self._num_nodes, self._output_dim)
-        sigma_bias = torch.exp(self.log_sigma_bias)
+        sigma_bias = torch.exp(self.log_sigma_biases)
         if self.shared_eps:
-            bias = self.mu_bias + sigma_bias * self.buffer_eps_bias
+            bias = self.mu_biases + sigma_bias * self.buffer_eps_bias
         else:
-            bias = self.mu_bias + sigma_bias * torch.randn(self.mu_bias.shape, device=self._device)
+            bias = self.mu_biases + sigma_bias * torch.randn(self.mu_biases.shape, device=self._device)
         value = value + bias
         # Reshape res back to 2D: (batch_size * num_nodes, state_dim) -> (batch_size, num_nodes * state_dim)
         return torch.reshape(value, [batch_size, self._num_nodes * self._output_dim])
@@ -212,8 +213,92 @@ class FC(nn.Module):
     def get_kl_sum(self):
         kl_weight = math.log(self._sigma_pi) - self.log_sigma_weight + 0.5 * (
                 torch.exp(self.log_sigma_weight) ** 2 + self.mu_weight ** 2) / (self._sigma_pi ** 2)
-        kl_bias = math.log(self._sigma_pi) - self.log_sigma_bias + 0.5 * (
-                torch.exp(self.log_sigma_bias) ** 2 + self.mu_bias ** 2) / (self._sigma_pi ** 2)
+        kl_bias = math.log(self._sigma_pi) - self.log_sigma_biases + 0.5 * (
+                torch.exp(self.log_sigma_biases) ** 2 + self.mu_biases ** 2) / (self._sigma_pi ** 2)
+        return kl_weight.sum() + kl_bias.sum()
+
+    def set_shared_eps(self):
+        self.shared_eps = True
+        torch.nn.init.normal_(self.buffer_eps_weight)
+        torch.nn.init.normal_(self.buffer_eps_bias)
+
+    def clear_shared_eps(self):
+        self.shared_eps = False
+
+
+class RandLinear(nn.Module):
+    def __init__(self, in_features, out_features, device, bias=True, sigma_pi=1.0, sigma_start=1.0):
+        super(RandLinear, self).__init__()
+
+        self._sigma_pi = sigma_pi
+        self._device = device
+
+        self.in_features = in_features
+        self.out_features = out_features
+        self.mu_weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
+        self.log_sigma_weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
+        self.register_buffer('buffer_eps_weight', torch.Tensor(out_features, in_features))
+        if bias:
+            self.mu_bias = torch.nn.Parameter(torch.Tensor(out_features))
+            self.log_sigma_bias = torch.nn.Parameter(torch.Tensor(out_features))
+            self.register_buffer('buffer_eps_bias', torch.Tensor(out_features))
+        else:
+            self.register_parameter('mu_bias', None)
+            self.register_parameter('log_sigma_bias', None)
+            self.register_buffer('buffer_eps_bias', None)
+
+        torch.nn.init.kaiming_uniform_(self.mu_weight, a=math.sqrt(5))
+        torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
+        torch.nn.init.constant_(self.buffer_eps_weight, 0)
+        if self.mu_bias is not None:
+            def _calculate_fan_in_and_fan_out(tensor):
+                dimensions = tensor.dim()
+                if dimensions < 2:
+                    raise ValueError("Fan in and fan out can not be computed for tensor with fewer than 2 dimensions")
+
+                num_input_fmaps = tensor.size(1)
+                num_output_fmaps = tensor.size(0)
+                receptive_field_size = 1
+                if tensor.dim() > 2:
+                    receptive_field_size = tensor[0][0].numel()
+                fan_in = num_input_fmaps * receptive_field_size
+                fan_out = num_output_fmaps * receptive_field_size
+
+                return fan_in, fan_out
+
+            fan_in, _ = _calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in)
+            torch.nn.init.uniform_(self.mu_bias, -bound, bound)
+            torch.nn.init.constant_(self.log_sigma_bias, math.log(sigma_start))
+            torch.nn.init.constant_(self.buffer_eps_bias, 0)
+
+        self.shared_eps = False
+
+    def forward(self, input):
+        sigma_weight = torch.exp(self.log_sigma_weight)
+        if self.shared_eps:
+            weight = self.mu_weight + sigma_weight * self.buffer_eps_weight
+        else:
+            weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
+        if self.mu_bias is not None:
+            sigma_bias = torch.exp(self.log_sigma_bias)
+            if self.shared_eps:
+                bias = self.mu_bias + sigma_bias * self.buffer_eps_bias
+            else:
+                bias = self.mu_bias + sigma_bias * torch.randn(self.mu_bias.shape, device=self._device)
+        else:
+            bias = None
+        return F.linear(input, weight, bias)
+
+    def get_kl_sum(self):
+        kl_weight = math.log(self._sigma_pi) - self.log_sigma_weight + 0.5 * (
+                torch.exp(self.log_sigma_weight) ** 2 + self.mu_weight ** 2) / (self._sigma_pi ** 2)
+        if self.mu_bias is not None:
+            kl_bias = math.log(self._sigma_pi) - self.log_sigma_bias + 0.5 * (
+                    torch.exp(self.log_sigma_bias) ** 2 + self.mu_bias ** 2) / (self._sigma_pi ** 2)
+        else:
+            kl_bias = 0
+
         return kl_weight.sum() + kl_bias.sum()
 
     def set_shared_eps(self):
@@ -401,7 +486,8 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         nn.Module.__init__(self)
         Seq2SeqAttrs.__init__(self, config, adj_mx)
         self.output_dim = config.get('output_dim', 1)
-        self.projection_layer = nn.Linear(self.rnn_units, self.output_dim)
+        self.projection_layer = RandLinear(self.rnn_units, self.output_dim, self.device,
+                                           sigma_pi=self.sigma_pi, sigma_start=self.sigma_start)
         self.dcgru_layers = nn.ModuleList()
         self.dcgru_layers.append(DCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
                                            self.num_nodes, self.device, filter_type=self.filter_type,
@@ -438,16 +524,18 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         return output, torch.stack(hidden_states)
 
     def get_kl_sum(self):
-        kl_sum = 0
+        kl_sum = self.projection_layer.get_kl_sum()
         for dcgru_layer in self.dcgru_layers:
             kl_sum += dcgru_layer.get_kl_sum()
         return kl_sum
 
     def set_shared_eps(self):
+        self.projection_layer.set_shared_eps()
         for dcgru_layer in self.dcgru_layers:
             dcgru_layer.set_shared_eps()
 
     def clear_shared_eps(self):
+        self.projection_layer.clear_shared_eps()
         for dcgru_layer in self.dcgru_layers:
             dcgru_layer.clear_shared_eps()
 
