@@ -465,6 +465,8 @@ class BDCRNNRegVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         self.encoder_model = EncoderModel(config, self.adj_mx)
         self.decoder_model = DecoderModel(config, self.adj_mx)
 
+        self.sigma_pi = float(config.get('sigma_pi2'))
+        self.sigma_start = float(config.get('sigma_start2'))
         self.encoder_sigma_model = EncoderModel(config, self.adj_mx)
         self.decoder_sigma_model = DecoderModel(config, self.adj_mx)
 
