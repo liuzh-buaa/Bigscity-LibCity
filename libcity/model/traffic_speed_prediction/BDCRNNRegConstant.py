@@ -238,7 +238,7 @@ class RandLinear(nn.Module):
 
                 return fan_in, fan_out
 
-            fan_in, _ = _calculate_fan_in_and_fan_out(self.weight)
+            fan_in, _ = _calculate_fan_in_and_fan_out(self.mu_weight)
             bound = 1 / math.sqrt(fan_in)
             torch.nn.init.uniform_(self.mu_bias, -bound, bound)
             torch.nn.init.constant_(self.log_sigma_bias, math.log(sigma_start))
