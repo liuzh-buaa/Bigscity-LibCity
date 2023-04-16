@@ -66,7 +66,7 @@ def count_parameters(model):
 
 class GCONV(nn.Module):
     def __init__(self, num_nodes, max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, bias_start=0.0,
-                 sigma_pi=1.0, sigma_start=1.0):
+                 sigma_pi=1.0, sigma_start=1.0, init_func=torch.nn.init.xavier_normal_):
         super(GCONV, self).__init__()
         self._num_nodes = num_nodes
         self._max_diffusion_step = max_diffusion_step
@@ -83,7 +83,7 @@ class GCONV(nn.Module):
         self.log_sigma_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
         self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
         self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
-        torch.nn.init.xavier_normal_(self.mu_weight)
+        init_func(self.mu_weight)
         torch.nn.init.constant_(self.mu_biases, bias_start)
         torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
         torch.nn.init.constant_(self.log_sigma_biases, math.log(sigma_start))
@@ -167,7 +167,7 @@ class GCONV(nn.Module):
 
 class FC(nn.Module):
     def __init__(self, num_nodes, device, input_dim, hid_dim, output_dim, bias_start=0.0,
-                 sigma_pi=1.0, sigma_start=1.0):
+                 sigma_pi=1.0, sigma_start=1.0, init_func=torch.nn.init.xavier_normal_):
         super(FC, self).__init__()
         self._num_nodes = num_nodes
         self._device = device
@@ -181,7 +181,7 @@ class FC(nn.Module):
         self.log_sigma_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
         self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
         self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
-        torch.nn.init.xavier_normal_(self.mu_weight)
+        init_func(self.mu_weight)
         torch.nn.init.constant_(self.mu_biases, bias_start)
         torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
         torch.nn.init.constant_(self.log_sigma_biases, math.log(sigma_start))
@@ -314,7 +314,8 @@ class RandLinear(nn.Module):
 
 class DCGRUCell(nn.Module):
     def __init__(self, input_dim, num_units, adj_mx, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
-                 filter_type="laplacian", use_gc_for_ru=True, sigma_pi=1.0, sigma_start=1.0):
+                 filter_type="laplacian", use_gc_for_ru=True, sigma_pi=1.0, sigma_start=1.0,
+                 init_func=torch.nn.init.xavier_normal_):
         """
 
         Args:
@@ -354,14 +355,14 @@ class DCGRUCell(nn.Module):
         if self._use_gc_for_ru:
             self._fn = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
                              input_dim=input_dim, hid_dim=self._num_units, output_dim=2 * self._num_units,
-                             bias_start=1.0, sigma_pi=sigma_pi, sigma_start=sigma_start)
+                             bias_start=1.0, sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
         else:
             self._fn = FC(self._num_nodes, self._device, input_dim=input_dim,
                           hid_dim=self._num_units, output_dim=2 * self._num_units, bias_start=1.0,
-                          sigma_pi=sigma_pi, sigma_start=sigma_start)
+                          sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
         self._gconv = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
                             input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0,
-                            sigma_pi=sigma_pi, sigma_start=sigma_start)
+                            sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
 
     @staticmethod
     def _build_sparse_matrix(lap, device):
@@ -548,13 +549,19 @@ class EncoderSigmaModel(nn.Module, Seq2SeqAttrs):
         nn.Module.__init__(self)
         Seq2SeqAttrs.__init__(self, config, adj_mx)
         self.dcgru_layers = nn.ModuleList()
+
+        def init_func_xavier_normal_1_10(tensor):
+            return torch.nn.init.xavier_normal_(tensor, gain=0.1)
+
         self.dcgru_layers.append(DCGRUCell(self.input_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
                                            self.num_nodes, self.device, filter_type=self.filter_type,
-                                           sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
+                                           sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start,
+                                           init_func=init_func_xavier_normal_1_10))
         for i in range(1, self.num_rnn_layers):
             self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
                                                self.num_nodes, self.device, filter_type=self.filter_type,
-                                               sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
+                                               sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start,
+                                               init_func=init_func_xavier_normal_1_10))
 
     def forward(self, inputs, hidden_state=None):
         """
@@ -607,13 +614,19 @@ class DecoderSigmaModel(nn.Module, Seq2SeqAttrs):
         self.projection_layer = RandLinear(self.rnn_units, self.output_dim, self.device,
                                            sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start)
         self.dcgru_layers = nn.ModuleList()
+
+        def init_func_xavier_normal_1_10(tensor):
+            return torch.nn.init.xavier_normal_(tensor, gain=0.1)
+
         self.dcgru_layers.append(DCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
                                            self.num_nodes, self.device, filter_type=self.filter_type,
-                                           sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
+                                           sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start,
+                                           init_func=init_func_xavier_normal_1_10))
         for i in range(1, self.num_rnn_layers):
             self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
                                                self.num_nodes, self.device, filter_type=self.filter_type,
-                                               sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
+                                               sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start,
+                                               init_func=init_func_xavier_normal_1_10))
 
     def forward(self, inputs, hidden_state=None):
         """

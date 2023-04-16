@@ -26,8 +26,8 @@
   "use_early_stop": true,
   "patience": 50,
 
-  "sigma_pi": 0.1,
-  "sigma_start": 0.1,
+  "sigma_pi": 0.01,
+  "sigma_start": 0.01,
   "sigma_0": 0.01,
 
   "evaluate_rep": 30,
