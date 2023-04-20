@@ -555,13 +555,11 @@ class EncoderSigmaModel(nn.Module, Seq2SeqAttrs):
 
         self.dcgru_layers.append(DCGRUCell(self.input_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
                                            self.num_nodes, self.device, filter_type=self.filter_type,
-                                           sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start,
-                                           init_func=init_func_xavier_normal_1_10))
+                                           sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
         for i in range(1, self.num_rnn_layers):
             self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
                                                self.num_nodes, self.device, filter_type=self.filter_type,
-                                               sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start,
-                                               init_func=init_func_xavier_normal_1_10))
+                                               sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
 
     def forward(self, inputs, hidden_state=None):
         """
@@ -620,13 +618,11 @@ class DecoderSigmaModel(nn.Module, Seq2SeqAttrs):
 
         self.dcgru_layers.append(DCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
                                            self.num_nodes, self.device, filter_type=self.filter_type,
-                                           sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start,
-                                           init_func=init_func_xavier_normal_1_10))
+                                           sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
         for i in range(1, self.num_rnn_layers):
             self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
                                                self.num_nodes, self.device, filter_type=self.filter_type,
-                                               sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start,
-                                               init_func=init_func_xavier_normal_1_10))
+                                               sigma_pi=self.sigma_sigma_pi, sigma_start=self.sigma_sigma_start))
 
     def forward(self, inputs, hidden_state=None):
         """
