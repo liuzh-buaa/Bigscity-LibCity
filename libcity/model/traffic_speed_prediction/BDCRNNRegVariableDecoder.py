@@ -64,10 +64,10 @@ def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-class GCONV(nn.Module):
+class RandGCONV(nn.Module):
     def __init__(self, num_nodes, max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, bias_start=0.0,
                  sigma_pi=1.0, sigma_start=1.0, init_func=torch.nn.init.xavier_normal_):
-        super(GCONV, self).__init__()
+        super(RandGCONV, self).__init__()
         self._num_nodes = num_nodes
         self._max_diffusion_step = max_diffusion_step
         self._supports = supports
@@ -150,10 +150,10 @@ class GCONV(nn.Module):
         return kl_weight.sum() + kl_bias.sum()
 
 
-class FC(nn.Module):
+class RandFC(nn.Module):
     def __init__(self, num_nodes, device, input_dim, hid_dim, output_dim, bias_start=0.0,
                  sigma_pi=1.0, sigma_start=1.0, init_func=torch.nn.init.xavier_normal_):
-        super(FC, self).__init__()
+        super(RandFC, self).__init__()
         self._num_nodes = num_nodes
         self._device = device
         self._output_dim = output_dim
@@ -266,7 +266,7 @@ class RandLinear(nn.Module):
         return kl_weight.sum() + kl_bias.sum()
 
 
-class DCGRUCell(nn.Module):
+class RandDCGRUCell(nn.Module):
     def __init__(self, input_dim, num_units, adj_mx, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
                  filter_type="laplacian", use_gc_for_ru=True, sigma_pi=1.0, sigma_start=1.0,
                  init_func=torch.nn.init.xavier_normal_):
@@ -307,16 +307,16 @@ class DCGRUCell(nn.Module):
             self._supports.append(self._build_sparse_matrix(support, self._device))
 
         if self._use_gc_for_ru:
-            self._fn = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
-                             input_dim=input_dim, hid_dim=self._num_units, output_dim=2 * self._num_units,
-                             bias_start=1.0, sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
+            self._fn = RandGCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
+                                 input_dim=input_dim, hid_dim=self._num_units, output_dim=2 * self._num_units,
+                                 bias_start=1.0, sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
         else:
-            self._fn = FC(self._num_nodes, self._device, input_dim=input_dim,
-                          hid_dim=self._num_units, output_dim=2 * self._num_units, bias_start=1.0,
-                          sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
-        self._gconv = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
-                            input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0,
-                            sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
+            self._fn = RandFC(self._num_nodes, self._device, input_dim=input_dim,
+                              hid_dim=self._num_units, output_dim=2 * self._num_units, bias_start=1.0,
+                              sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
+        self._gconv = RandGCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
+                                input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0,
+                                sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
 
     @staticmethod
     def _build_sparse_matrix(lap, device):
@@ -380,13 +380,13 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
         nn.Module.__init__(self)
         Seq2SeqAttrs.__init__(self, config, adj_mx)
         self.dcgru_layers = nn.ModuleList()
-        self.dcgru_layers.append(DCGRUCell(self.input_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
-                                           self.num_nodes, self.device, filter_type=self.filter_type,
-                                           sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
-        for i in range(1, self.num_rnn_layers):
-            self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
+        self.dcgru_layers.append(RandDCGRUCell(self.input_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
                                                self.num_nodes, self.device, filter_type=self.filter_type,
                                                sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
+        for i in range(1, self.num_rnn_layers):
+            self.dcgru_layers.append(RandDCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
+                                                   self.num_nodes, self.device, filter_type=self.filter_type,
+                                                   sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
 
     def forward(self, inputs, hidden_state=None):
         """
@@ -431,13 +431,13 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         self.projection_layer = RandLinear(self.rnn_units, self.output_dim, self.device,
                                            sigma_pi=self.sigma_pi, sigma_start=self.sigma_start)
         self.dcgru_layers = nn.ModuleList()
-        self.dcgru_layers.append(DCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
-                                           self.num_nodes, self.device, filter_type=self.filter_type,
-                                           sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
-        for i in range(1, self.num_rnn_layers):
-            self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
+        self.dcgru_layers.append(RandDCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
                                                self.num_nodes, self.device, filter_type=self.filter_type,
                                                sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
+        for i in range(1, self.num_rnn_layers):
+            self.dcgru_layers.append(RandDCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
+                                                   self.num_nodes, self.device, filter_type=self.filter_type,
+                                                   sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
 
     def forward(self, inputs, hidden_state=None):
         """
@@ -484,13 +484,13 @@ class DecoderSigmaModel(nn.Module, Seq2SeqAttrs):
         def init_func_xavier_normal_1_10(tensor):
             return torch.nn.init.xavier_normal_(tensor, gain=0.1)
 
-        self.dcgru_layers.append(DCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
-                                           self.num_nodes, self.device, filter_type=self.filter_type,
-                                           sigma_pi=self.sigma_0_sigma_pi, sigma_start=self.sigma_0_sigma_start))
-        for i in range(1, self.num_rnn_layers):
-            self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
+        self.dcgru_layers.append(RandDCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
                                                self.num_nodes, self.device, filter_type=self.filter_type,
                                                sigma_pi=self.sigma_0_sigma_pi, sigma_start=self.sigma_0_sigma_start))
+        for i in range(1, self.num_rnn_layers):
+            self.dcgru_layers.append(RandDCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
+                                                   self.num_nodes, self.device, filter_type=self.filter_type,
+                                                   sigma_pi=self.sigma_0_sigma_pi, sigma_start=self.sigma_0_sigma_start))
 
     def forward(self, inputs, hidden_state=None):
         """
@@ -658,10 +658,8 @@ class BDCRNNRegVariableDecoder(AbstractTrafficStateModel, Seq2SeqAttrs):
         outputs_sigma = self.decoder_sigma(encoder_hidden_state, labels, batches_seen=batches_seen)
         # (self.output_window, batch_size, self.num_nodes * self.output_dim)
         self._logger.debug("Decoder Sigma complete")
-        outputs_sigma = outputs_sigma.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1,
-                                                                                                                    0,
-                                                                                                                    2,
-                                                                                                                    3)
+        outputs_sigma = outputs_sigma.view(self.output_window, batch_size,
+                                           self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
 
         if batches_seen == 0:
             self._logger.info("Total trainable parameters {}".format(count_parameters(self)))
@@ -686,11 +684,11 @@ class BDCRNNRegVariableDecoder(AbstractTrafficStateModel, Seq2SeqAttrs):
         return self.forward(batch, batches_seen)[0]
 
     def _get_kl_sum(self):
-        return self.encoder_model.get_kl_sum() + self.decoder_model.get_kl_sum() + self.decoder_sigma_model.get_kl_sum()
+        return self.encoder_model.get_kl_sum() + self.decoder_model.get_kl_sum()
 
 
 if __name__ == '__main__':
-    GCONV(207, 2, [torch.randn(207, 207, device='cuda:0'), torch.randn(207, 207, device='cuda:0')], 'cuda:0',
-          input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
-    FC(207, 'cuda:0', input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
+    RandGCONV(207, 2, [torch.randn(207, 207, device='cuda:0'), torch.randn(207, 207, device='cuda:0')], 'cuda:0',
+              input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
+    RandFC(207, 'cuda:0', input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
     print(torch.mean(torch.stack([torch.randn(3, 4, 5) for i in range(5)]), dim=0).shape)
