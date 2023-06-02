@@ -1,16 +1,8 @@
-import math
-
-import scipy.sparse as sp
-from scipy.sparse import linalg
 import numpy as np
+import scipy.sparse as sp
 import torch
 import torch.nn as nn
-from logging import getLogger
-from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
-from libcity.model import loss
-import torch.nn.functional as F
-
-from libcity.model.covert_dcrnn_to_b import convert_dcrnn_to_bdcrnn
+from scipy.sparse import linalg
 
 
 def calculate_normalized_laplacian(adj):
@@ -65,30 +57,20 @@ def count_parameters(model):
 
 
 class GCONV(nn.Module):
-    def __init__(self, num_nodes, max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, bias_start=0.0,
-                 sigma_pi=1.0, sigma_start=1.0):
-        super(GCONV, self).__init__()
+    def __init__(self, num_nodes, max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, bias_start=0.0):
+        super().__init__()
         self._num_nodes = num_nodes
         self._max_diffusion_step = max_diffusion_step
         self._supports = supports
         self._device = device
         self._num_matrices = len(self._supports) * self._max_diffusion_step + 1  # Ks
         self._output_dim = output_dim
-        self._sigma_pi = sigma_pi
         input_size = input_dim + hid_dim
         shape = (input_size * self._num_matrices, self._output_dim)
-        self.mu_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
-        self.mu_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
-        self.log_sigma_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
-        self.log_sigma_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
-        # self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
-        # self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
-        torch.nn.init.xavier_normal_(self.mu_weight)
-        torch.nn.init.constant_(self.mu_biases, bias_start)
-        torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
-        torch.nn.init.constant_(self.log_sigma_biases, math.log(sigma_start))
-        # torch.nn.init.constant_(self.buffer_eps_weight, 0)
-        # torch.nn.init.constant_(self.buffer_eps_bias, 0)
+        self.weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
+        self.biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
+        torch.nn.init.xavier_normal_(self.weight)
+        torch.nn.init.constant_(self.biases, bias_start)
 
     @staticmethod
     def _concat(x, x_):
@@ -133,38 +115,24 @@ class GCONV(nn.Module):
         x = x.permute(3, 1, 2, 0)  # (batch_size, num_nodes, input_size, num_matrices)
         x = torch.reshape(x, shape=[batch_size * self._num_nodes, input_size * self._num_matrices])
 
-        sigma_weight = torch.exp(self.log_sigma_weight)
-        weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
-        x = torch.matmul(x, weight)  # (batch_size * self._num_nodes, self._output_dim)
-        sigma_bias = torch.exp(self.log_sigma_biases)
-        bias = self.mu_biases + sigma_bias * torch.randn(self.mu_biases.shape, device=self._device)
-        x = x + bias
-        # Reshape res back to 2D: (batch_size * num_nodes, state_dim) -> (batch_size, num_nodes * state_dim)
+        x = torch.matmul(x, self.weight)  # (batch_size * self._num_nodes, self._output_dim)
+        x += self.biases
+        # Reshape res back to 2D: (batch_size * num_node, state_dim) -> (batch_size, num_node * state_dim)
         return torch.reshape(x, [batch_size, self._num_nodes * self._output_dim])
 
 
 class FC(nn.Module):
-    def __init__(self, num_nodes, device, input_dim, hid_dim, output_dim, bias_start=0.0,
-                 sigma_pi=1.0, sigma_start=1.0):
-        super(FC, self).__init__()
+    def __init__(self, num_nodes, device, input_dim, hid_dim, output_dim, bias_start=0.0):
+        super().__init__()
         self._num_nodes = num_nodes
         self._device = device
         self._output_dim = output_dim
-        self._sigma_pi = sigma_pi
         input_size = input_dim + hid_dim
         shape = (input_size, self._output_dim)
-        self.mu_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
-        self.mu_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
-        self.log_sigma_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
-        self.log_sigma_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
-        # self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
-        # self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
-        torch.nn.init.xavier_normal_(self.mu_weight)
-        torch.nn.init.constant_(self.mu_biases, bias_start)
-        torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
-        torch.nn.init.constant_(self.log_sigma_biases, math.log(sigma_start))
-        # torch.nn.init.constant_(self.buffer_eps_weight, 0)
-        # torch.nn.init.constant_(self.buffer_eps_bias, 0)
+        self.weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
+        self.biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
+        torch.nn.init.xavier_normal_(self.weight)
+        torch.nn.init.constant_(self.biases, bias_start)
 
     def forward(self, inputs, state):
         batch_size = inputs.shape[0]
@@ -173,77 +141,16 @@ class FC(nn.Module):
         state = torch.reshape(state, (batch_size * self._num_nodes, -1))
         inputs_and_state = torch.cat([inputs, state], dim=-1)
         # (batch_size * self._num_nodes, input_size(input_dim+state_dim))
-        sigma_weight = torch.exp(self.log_sigma_weight)
-        weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
-        value = torch.sigmoid(torch.matmul(inputs_and_state, weight))
+        value = torch.sigmoid(torch.matmul(inputs_and_state, self.weight))
         # (batch_size * self._num_nodes, self._output_dim)
-        sigma_bias = torch.exp(self.log_sigma_biases)
-        bias = self.mu_biases + sigma_bias * torch.randn(self.mu_biases.shape, device=self._device)
-        value = value + bias
-        # Reshape res back to 2D: (batch_size * num_nodes, state_dim) -> (batch_size, num_nodes * state_dim)
+        value += self.biases
+        # Reshape res back to 2D: (batch_size * num_node, state_dim) -> (batch_size, num_node * state_dim)
         return torch.reshape(value, [batch_size, self._num_nodes * self._output_dim])
-
-
-class RandLinear(nn.Module):
-    def __init__(self, in_features, out_features, device, bias=True, sigma_pi=1.0, sigma_start=1.0):
-        super(RandLinear, self).__init__()
-
-        self._sigma_pi = sigma_pi
-        self._device = device
-
-        self.in_features = in_features
-        self.out_features = out_features
-        self.mu_weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
-        self.log_sigma_weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
-        # self.register_buffer('buffer_eps_weight', torch.Tensor(out_features, in_features))
-        if bias:
-            self.mu_bias = torch.nn.Parameter(torch.Tensor(out_features))
-            self.log_sigma_bias = torch.nn.Parameter(torch.Tensor(out_features))
-            # self.register_buffer('buffer_eps_bias', torch.Tensor(out_features))
-        else:
-            self.register_parameter('mu_bias', None)
-            self.register_parameter('log_sigma_bias', None)
-            # self.register_buffer('buffer_eps_bias', None)
-
-        torch.nn.init.kaiming_uniform_(self.mu_weight, a=math.sqrt(5))
-        torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
-        # torch.nn.init.constant_(self.buffer_eps_weight, 0)
-        if self.mu_bias is not None:
-            def _calculate_fan_in_and_fan_out(tensor):
-                dimensions = tensor.dim()
-                if dimensions < 2:
-                    raise ValueError("Fan in and fan out can not be computed for tensor with fewer than 2 dimensions")
-
-                num_input_fmaps = tensor.size(1)
-                num_output_fmaps = tensor.size(0)
-                receptive_field_size = 1
-                if tensor.dim() > 2:
-                    receptive_field_size = tensor[0][0].numel()
-                fan_in = num_input_fmaps * receptive_field_size
-                fan_out = num_output_fmaps * receptive_field_size
-
-                return fan_in, fan_out
-
-            fan_in, _ = _calculate_fan_in_and_fan_out(self.mu_weight)
-            bound = 1 / math.sqrt(fan_in)
-            torch.nn.init.uniform_(self.mu_bias, -bound, bound)
-            torch.nn.init.constant_(self.log_sigma_bias, math.log(sigma_start))
-            # torch.nn.init.constant_(self.buffer_eps_bias, 0)
-
-    def forward(self, input):
-        sigma_weight = torch.exp(self.log_sigma_weight)
-        weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
-        if self.mu_bias is not None:
-            sigma_bias = torch.exp(self.log_sigma_bias)
-            bias = self.mu_bias + sigma_bias * torch.randn(self.mu_bias.shape, device=self._device)
-        else:
-            bias = None
-        return F.linear(input, weight, bias)
 
 
 class DCGRUCell(nn.Module):
     def __init__(self, input_dim, num_units, adj_mx, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
-                 filter_type="laplacian", use_gc_for_ru=True, sigma_pi=1.0, sigma_start=1.0):
+                 filter_type="laplacian", use_gc_for_ru=True):
         """
 
         Args:
@@ -283,14 +190,12 @@ class DCGRUCell(nn.Module):
         if self._use_gc_for_ru:
             self._fn = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
                              input_dim=input_dim, hid_dim=self._num_units, output_dim=2 * self._num_units,
-                             bias_start=1.0, sigma_pi=sigma_pi, sigma_start=sigma_start)
+                             bias_start=1.0)
         else:
             self._fn = FC(self._num_nodes, self._device, input_dim=input_dim,
-                          hid_dim=self._num_units, output_dim=2 * self._num_units, bias_start=1.0,
-                          sigma_pi=sigma_pi, sigma_start=sigma_start)
+                          hid_dim=self._num_units, output_dim=2 * self._num_units, bias_start=1.0)
         self._gconv = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
-                            input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0,
-                            sigma_pi=sigma_pi, sigma_start=sigma_start)
+                            input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0)
 
     @staticmethod
     def _build_sparse_matrix(lap, device):
@@ -340,23 +245,18 @@ class Seq2SeqAttrs:
         self.hidden_state_size = self.num_nodes * self.rnn_units
         self.input_dim = config.get('feature_dim', 1)
         self.device = config.get('device', torch.device('cpu'))
-        self.sigma_pi = float(config.get('sigma_pi'))
-        self.sigma_start = float(config.get('sigma_start'))
-        self.sigma_0 = float(config.get('sigma_0'))
 
 
-class EncoderModel(nn.Module, Seq2SeqAttrs):
+class EncoderSigmaModel(nn.Module, Seq2SeqAttrs):
     def __init__(self, config, adj_mx):
         nn.Module.__init__(self)
         Seq2SeqAttrs.__init__(self, config, adj_mx)
         self.dcgru_layers = nn.ModuleList()
         self.dcgru_layers.append(DCGRUCell(self.input_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
-                                           self.num_nodes, self.device, filter_type=self.filter_type,
-                                           sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
+                                           self.num_nodes, self.device, filter_type=self.filter_type))
         for i in range(1, self.num_rnn_layers):
             self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
-                                               self.num_nodes, self.device, filter_type=self.filter_type,
-                                               sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
+                                               self.num_nodes, self.device, filter_type=self.filter_type))
 
     def forward(self, inputs, hidden_state=None):
         """
@@ -387,21 +287,18 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
         return output, torch.stack(hidden_states)  # runs in O(num_layers) so not too slow
 
 
-class DecoderModel(nn.Module, Seq2SeqAttrs):
+class DecoderSigmaModel(nn.Module, Seq2SeqAttrs):
     def __init__(self, config, adj_mx):
         nn.Module.__init__(self)
         Seq2SeqAttrs.__init__(self, config, adj_mx)
         self.output_dim = config.get('output_dim', 1)
-        self.projection_layer = RandLinear(self.rnn_units, self.output_dim, self.device,
-                                           sigma_pi=self.sigma_pi, sigma_start=self.sigma_start)
+        self.projection_layer = nn.Linear(self.rnn_units, self.output_dim)
         self.dcgru_layers = nn.ModuleList()
         self.dcgru_layers.append(DCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
-                                           self.num_nodes, self.device, filter_type=self.filter_type,
-                                           sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
+                                           self.num_nodes, self.device, filter_type=self.filter_type))
         for i in range(1, self.num_rnn_layers):
             self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
-                                               self.num_nodes, self.device, filter_type=self.filter_type,
-                                               sigma_pi=self.sigma_pi, sigma_start=self.sigma_start))
+                                               self.num_nodes, self.device, filter_type=self.filter_type))
 
     def forward(self, inputs, hidden_state=None):
         """
@@ -428,136 +325,3 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         projected = self.projection_layer(output.view(-1, self.rnn_units))
         output = projected.view(-1, self.num_nodes * self.output_dim)
         return output, torch.stack(hidden_states)
-
-
-class BDCRNN(AbstractTrafficStateModel, Seq2SeqAttrs):
-    def __init__(self, config, data_feature):
-        self.adj_mx = data_feature.get('adj_mx')
-        self.num_nodes = data_feature.get('num_nodes', 1)
-        self.feature_dim = data_feature.get('feature_dim', 1)
-        config['num_nodes'] = self.num_nodes
-        config['feature_dim'] = self.feature_dim
-        self.output_dim = data_feature.get('output_dim', 1)
-
-        super().__init__(config, data_feature)
-        Seq2SeqAttrs.__init__(self, config, self.adj_mx)
-        self.encoder_model = EncoderModel(config, self.adj_mx)
-        self.decoder_model = DecoderModel(config, self.adj_mx)
-
-        self.use_curriculum_learning = config.get('use_curriculum_learning', False)
-        self.input_window = config.get('input_window', 1)
-        self.output_window = config.get('output_window', 1)
-        self.device = config.get('device', torch.device('cpu'))
-        self._logger = getLogger()
-        self._scaler = self.data_feature.get('scaler')
-
-        if config['init_params_from_dcrnn']:
-            convert_dcrnn_to_bdcrnn(self, self.device)
-
-    def _compute_sampling_threshold(self, batches_seen):
-        return self.cl_decay_steps / (
-                self.cl_decay_steps + np.exp(batches_seen / self.cl_decay_steps))
-
-    def encoder(self, inputs):
-        """
-        encoder forward pass on t time steps
-
-        Args:
-            inputs: shape (input_window, batch_size, num_sensor * input_dim)
-
-        Returns:
-            torch.tensor: (num_layers, batch_size, self.hidden_state_size)
-        """
-        encoder_hidden_state = None
-        for t in range(self.input_window):
-            _, encoder_hidden_state = self.encoder_model(inputs[t], encoder_hidden_state)
-            # encoder_hidden_state: encoder的多层GRU的全部的隐层 (num_layers, batch_size, self.hidden_state_size)
-
-        return encoder_hidden_state  # 最后一个隐状态
-
-    def decoder(self, encoder_hidden_state, labels=None, batches_seen=None):
-        """
-        Decoder forward pass
-
-        Args:
-            encoder_hidden_state: (num_layers, batch_size, self.hidden_state_size)
-            labels:  (self.output_window, batch_size, self.num_nodes * self.output_dim)
-                [optional, not exist for inference]
-            batches_seen: global step [optional, not exist for inference]
-
-        Returns:
-            torch.tensor: (self.output_window, batch_size, self.num_nodes * self.output_dim)
-        """
-        batch_size = encoder_hidden_state.size(1)
-        go_symbol = torch.zeros((batch_size, self.num_nodes * self.output_dim), device=self.device)
-        decoder_hidden_state = encoder_hidden_state
-        decoder_input = go_symbol
-
-        outputs = []
-        for t in range(self.output_window):
-            decoder_output, decoder_hidden_state = self.decoder_model(decoder_input, decoder_hidden_state)
-            decoder_input = decoder_output  # (batch_size, self.num_nodes * self.output_dim)
-            outputs.append(decoder_output)
-            if self.training and self.use_curriculum_learning:
-                c = np.random.uniform(0, 1)
-                if c < self._compute_sampling_threshold(batches_seen):
-                    decoder_input = labels[t]  # (batch_size, self.num_nodes * self.output_dim)
-        outputs = torch.stack(outputs)
-        return outputs
-
-    def forward(self, batch, batches_seen=None):
-        """
-        seq2seq forward pass
-
-        Args:
-            batch: a batch of input,
-                batch['X']: shape (batch_size, input_window, num_nodes, input_dim) \n
-                batch['y']: shape (batch_size, output_window, num_nodes, output_dim) \n
-            batches_seen: batches seen till now
-
-        Returns:
-            torch.tensor: (batch_size, self.output_window, self.num_nodes, self.output_dim)
-        """
-        inputs = batch['X']
-        labels = batch['y']
-        batch_size, _, num_nodes, input_dim = inputs.shape
-        inputs = inputs.permute(1, 0, 2, 3)  # (input_window, batch_size, num_nodes, input_dim)
-        inputs = inputs.view(self.input_window, batch_size, num_nodes * input_dim).to(self.device)
-        self._logger.debug("X: {}".format(inputs.size()))  # (input_window, batch_size, num_nodes * input_dim)
-
-        if labels is not None:
-            labels = labels.permute(1, 0, 2, 3)  # (output_window, batch_size, num_nodes, output_dim)
-            labels = labels[..., :self.output_dim].contiguous().view(
-                self.output_window, batch_size, num_nodes * self.output_dim).to(self.device)
-            self._logger.debug("y: {}".format(labels.size()))
-
-        encoder_hidden_state = self.encoder(inputs)
-        # (num_layers, batch_size, self.hidden_state_size)
-        self._logger.debug("Encoder complete")
-        outputs = self.decoder(encoder_hidden_state, labels, batches_seen=batches_seen)
-        # (self.output_window, batch_size, self.num_nodes * self.output_dim)
-        self._logger.debug("Decoder complete")
-
-        if batches_seen == 0:
-            self._logger.info("Total trainable parameters {}".format(count_parameters(self)))
-        outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
-        return outputs
-
-    def calculate_loss(self, batch, batches_seen=None):
-        y_true = batch['y']
-        y_predicted = self.predict(batch, batches_seen)
-        y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        return loss.masked_mae_torch(y_predicted, y_true, 0)
-
-    def predict(self, batch, batches_seen=None):
-        return self.forward(batch, batches_seen)
-
-
-if __name__ == '__main__':
-    # GCONV(207, 2, [torch.randn(207, 207, device='cuda:0'), torch.randn(207, 207, device='cuda:0')], 'cuda:0',
-    #       input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
-    # FC(207, 'cuda:0', input_dim=2, hid_dim=64, output_dim=128, bias_start=1.0)
-    # print(torch.mean(torch.stack([torch.randn(3, 4, 5) for i in range(5)]), dim=0).shape)
-    x = torch.tensor([0, float('nan')])
-    print(torch.isnan(x))
