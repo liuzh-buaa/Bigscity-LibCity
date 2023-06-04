@@ -551,7 +551,7 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
             dcgru_layer.clear_shared_eps()
 
 
-class BDCRNNRegVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
+class BDCRNNRegVariableSharedLayer(AbstractTrafficStateModel, Seq2SeqAttrs):
     def __init__(self, config, data_feature):
         self.adj_mx = data_feature.get('adj_mx')
         self.num_nodes = data_feature.get('num_nodes', 1)

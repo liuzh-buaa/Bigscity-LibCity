@@ -6,6 +6,8 @@ from libcity.model.traffic_speed_prediction.BDCRNNRegVariableShared import BDCRN
 from libcity.model.traffic_speed_prediction.BDCRNNRegVariableDecoder import BDCRNNRegVariableDecoder
 from libcity.model.traffic_speed_prediction.BDCRNNRegVariableFC import BDCRNNRegVariableFC
 from libcity.model.traffic_speed_prediction.BDCRNNRegVariableSharedFC import BDCRNNRegVariableSharedFC
+from libcity.model.traffic_speed_prediction.BDCRNNRegVariableLayer import BDCRNNRegVariableLayer
+from libcity.model.traffic_speed_prediction.BDCRNNRegVariableSharedLayer import BDCRNNRegVariableSharedLayer
 from libcity.model.traffic_speed_prediction.STGCN import STGCN
 from libcity.model.traffic_speed_prediction.GWNET import GWNET
 from libcity.model.traffic_speed_prediction.MTGNN import MTGNN
@@ -34,6 +36,8 @@ __all__ = [
     "BDCRNNRegVariableDecoder",
     "BDCRNNRegVariableFC",
     "BDCRNNRegVariableSharedFC",
+    "BDCRNNRegVariableLayer",
+    "BDCRNNRegVariableSharedLayer",
     "STGCN",
     "GWNET",
     "TGCLSTM",
