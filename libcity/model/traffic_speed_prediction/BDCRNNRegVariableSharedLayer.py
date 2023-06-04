@@ -670,7 +670,7 @@ class BDCRNNRegVariableSharedLayer(AbstractTrafficStateModel, Seq2SeqAttrs):
         if batches_seen == 0:
             self._logger.info("Total trainable parameters {}".format(count_parameters(self)))
         outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
-        variance = outputs.view(self.output_window, batch_size, self.num_nodes, 1).permute(1, 0, 2, 3)
+        variance = variance.view(self.output_window, batch_size, self.num_nodes, 1).permute(1, 0, 2, 3)
         return outputs, variance
 
     def calculate_loss(self, batch, batches_seen=None):
