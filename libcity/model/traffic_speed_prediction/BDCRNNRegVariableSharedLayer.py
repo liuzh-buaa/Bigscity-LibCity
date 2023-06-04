@@ -426,8 +426,6 @@ class Seq2SeqAttrs:
         self.device = config.get('device', torch.device('cpu'))
         self.sigma_pi = float(config.get('sigma_pi'))
         self.sigma_start = float(config.get('sigma_start'))
-        self.sigma_sigma_pi = float(config.get('sigma_sigma_pi'))
-        self.sigma_sigma_start = float(config.get('sigma_sigma_start'))
 
 
 class EncoderModel(nn.Module, Seq2SeqAttrs):
