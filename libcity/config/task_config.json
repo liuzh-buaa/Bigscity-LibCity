@@ -83,11 +83,10 @@
     },
     "traffic_state_pred": {
         "allowed_model": [
-            "BDCRNNRegConstant", "BDCRNNRegConstantShared",
-            "BDCRNNRegVariable", "BDCRNNRegVariableShared",
-            "BDCRNNRegVariableDecoder",
-            "BDCRNNRegVariableFC", "BDCRNNRegVariableSharedFC",
-            "BDCRNNRegVariableLayer", "BDCRNNRegVariableSharedLayer",
+            "BDCRNNConstant", "BDCRNNConstantShared",
+            "BDCRNNVariable", "BDCRNNVariableShared", "BDCRNNLogVariable", "BDCRNNLogVariableShared",
+            "BDCRNNVariableFC", "BDCRNNVariableSharedFC", "BDCRNNLogVariableFC", "BDCRNNLogVariableSharedFC",
+            "BDCRNNVariableLayer", "BDCRNNVariableSharedLayer", "BDCRNNLogVariableLayer", "BDCRNNLogVariableSharedLayer",
             "DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
             "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet", "RNN", "LSTM", "GRU", "AutoEncoder", "Seq2Seq",
             "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon", "ToGCN", "CONVGCN", "STG2Seq",
@@ -105,48 +104,72 @@
             "NYCTAXI_OD", "NYCTAXI_GRID", "T_DRIVE_SMALL", "NYCBIKE", "AUSTINRIDE",
             "BIKEDC", "BIKECHI", "NYC_RISK", "CHICAGO_RISK"
         ],
-        "BDCRNNRegConstant": {
+        "BDCRNNConstant": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-        "BDCRNNRegConstantShared": {
+        "BDCRNNConstantShared": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-        "BDCRNNRegVariable": {
+        "BDCRNNVariable": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-        "BDCRNNRegVariableShared": {
+        "BDCRNNVariableShared": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-        "BDCRNNRegVariableDecoder": {
+        "BDCRNNLogVariable": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-        "BDCRNNRegVariableFC": {
+        "BDCRNNLogVariableShared": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-        "BDCRNNRegVariableSharedFC": {
+        "BDCRNNVariableFC": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-
-        "BDCRNNRegVariableLayer": {
+        "BDCRNNVariableSharedFC": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-        "BDCRNNRegVariableSharedLayer": {
+        "BDCRNNLogVariableFC": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "BDCRNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "BDCRNNLogVariableSharedFC": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "BDCRNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "BDCRNNVariableLayer": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "BDCRNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "BDCRNNVariableSharedLayer": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "BDCRNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "BDCRNNLogVariableLayer": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "BDCRNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "BDCRNNLogVariableSharedLayer": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"

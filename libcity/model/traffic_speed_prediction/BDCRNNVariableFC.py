@@ -315,7 +315,8 @@ class RandDCGRUCell(nn.Module):
                               hid_dim=self._num_units, output_dim=2 * self._num_units, bias_start=1.0,
                               sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
         self._gconv = RandGCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
-                                input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0,
+                                input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units,
+                                bias_start=0.0,
                                 sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
 
     @staticmethod
@@ -371,8 +372,7 @@ class Seq2SeqAttrs:
         self.device = config.get('device', torch.device('cpu'))
         self.sigma_pi = float(config.get('sigma_pi'))
         self.sigma_start = float(config.get('sigma_start'))
-        self.sigma_0_sigma_pi = float(config.get('sigma_0_sigma_pi'))
-        self.sigma_0_sigma_start = float(config.get('sigma_0_sigma_start'))
+        self.custom_relu_eps = float(config.get('custom_relu_eps'))
 
 
 class EncoderModel(nn.Module, Seq2SeqAttrs):
@@ -472,60 +472,7 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         return kl_sum
 
 
-class DecoderSigmaModel(nn.Module, Seq2SeqAttrs):
-    def __init__(self, config, adj_mx):
-        nn.Module.__init__(self)
-        Seq2SeqAttrs.__init__(self, config, adj_mx)
-        self.output_dim = config.get('output_dim', 1)
-        self.projection_layer = RandLinear(self.rnn_units, self.output_dim, self.device,
-                                           sigma_pi=self.sigma_0_sigma_pi, sigma_start=self.sigma_0_sigma_start)
-        self.dcgru_layers = nn.ModuleList()
-
-        def init_func_xavier_normal_1_10(tensor):
-            return torch.nn.init.xavier_normal_(tensor, gain=0.1)
-
-        self.dcgru_layers.append(RandDCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
-                                               self.num_nodes, self.device, filter_type=self.filter_type,
-                                               sigma_pi=self.sigma_0_sigma_pi, sigma_start=self.sigma_0_sigma_start))
-        for i in range(1, self.num_rnn_layers):
-            self.dcgru_layers.append(RandDCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
-                                                   self.num_nodes, self.device, filter_type=self.filter_type,
-                                                   sigma_pi=self.sigma_0_sigma_pi, sigma_start=self.sigma_0_sigma_start))
-
-    def forward(self, inputs, hidden_state=None):
-        """
-        Decoder forward pass.
-
-        Args:
-            inputs:  shape (batch_size, self.num_nodes * self.output_dim)
-            hidden_state: (num_layers, batch_size, self.hidden_state_size),
-                optional, zeros if not provided, hidden_state_size = num_nodes * rnn_units
-
-        Returns:
-            tuple: tuple contains:
-                output: shape (batch_size, self.num_nodes * self.output_dim) \n
-                hidden_state: shape (num_layers, batch_size, self.hidden_state_size) \n
-                (lower indices mean lower layers)
-        """
-        hidden_states = []
-        output = inputs
-        for layer_num, dcgru_layer in enumerate(self.dcgru_layers):
-            next_hidden_state = dcgru_layer(output, hidden_state[layer_num])
-            # next_hidden_state: (batch_size, self.num_nodes * self.rnn_units)
-            hidden_states.append(next_hidden_state)
-            output = next_hidden_state
-        projected = self.projection_layer(output.view(-1, self.rnn_units))
-        output = projected.view(-1, self.num_nodes * self.output_dim)
-        return output, torch.stack(hidden_states)
-
-    def get_kl_sum(self):
-        kl_sum = self.projection_layer.get_kl_sum()
-        for dcgru_layer in self.dcgru_layers:
-            kl_sum += dcgru_layer.get_kl_sum()
-        return kl_sum
-
-
-class BDCRNNRegVariableDecoder(AbstractTrafficStateModel, Seq2SeqAttrs):
+class BDCRNNVariableFC(AbstractTrafficStateModel, Seq2SeqAttrs):
     def __init__(self, config, data_feature):
         self.adj_mx = data_feature.get('adj_mx')
         self.num_nodes = data_feature.get('num_nodes', 1)
@@ -539,6 +486,9 @@ class BDCRNNRegVariableDecoder(AbstractTrafficStateModel, Seq2SeqAttrs):
         self.encoder_model = EncoderModel(config, self.adj_mx)
         self.decoder_model = DecoderModel(config, self.adj_mx)
 
+        from libcity.model.traffic_speed_prediction.BDCRNNFCBase import EncoderSigmaModel
+        self.encoder_sigma_model = EncoderSigmaModel(config, self.adj_mx)
+        from libcity.model.traffic_speed_prediction.BDCRNNFCBase import DecoderSigmaModel
         self.decoder_sigma_model = DecoderSigmaModel(config, self.adj_mx)
 
         self.use_curriculum_learning = config.get('use_curriculum_learning', False)
@@ -568,6 +518,14 @@ class BDCRNNRegVariableDecoder(AbstractTrafficStateModel, Seq2SeqAttrs):
         encoder_hidden_state = None
         for t in range(self.input_window):
             _, encoder_hidden_state = self.encoder_model(inputs[t], encoder_hidden_state)
+            # encoder_hidden_state: encoder的多层GRU的全部的隐层 (num_layers, batch_size, self.hidden_state_size)
+
+        return encoder_hidden_state  # 最后一个隐状态
+
+    def encoder_sigma(self, inputs):
+        encoder_hidden_state = None
+        for t in range(self.input_window):
+            _, encoder_hidden_state = self.encoder_sigma_model(inputs[t], encoder_hidden_state)
             # encoder_hidden_state: encoder的多层GRU的全部的隐层 (num_layers, batch_size, self.hidden_state_size)
 
         return encoder_hidden_state  # 最后一个隐状态
@@ -649,29 +607,48 @@ class BDCRNNRegVariableDecoder(AbstractTrafficStateModel, Seq2SeqAttrs):
         encoder_hidden_state = self.encoder(inputs)
         # (num_layers, batch_size, self.hidden_state_size)
         self._logger.debug("Encoder complete")
-
         outputs = self.decoder(encoder_hidden_state, labels, batches_seen=batches_seen)
         # (self.output_window, batch_size, self.num_nodes * self.output_dim)
         self._logger.debug("Decoder complete")
-        outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
-
-        outputs_sigma = self.decoder_sigma(encoder_hidden_state, labels, batches_seen=batches_seen)
-        # (self.output_window, batch_size, self.num_nodes * self.output_dim)
-        self._logger.debug("Decoder Sigma complete")
-        outputs_sigma = outputs_sigma.view(self.output_window, batch_size,
-                                           self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
 
         if batches_seen == 0:
             self._logger.info("Total trainable parameters {}".format(count_parameters(self)))
+        outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
+        return outputs
 
-        return outputs, outputs_sigma
+    def forward_sigma(self, batch, batches_seen=None):
+        inputs = batch['X']
+        labels = batch['y']
+        batch_size, _, num_nodes, input_dim = inputs.shape
+        inputs = inputs.permute(1, 0, 2, 3)  # (input_window, batch_size, num_nodes, input_dim)
+        inputs = inputs.view(self.input_window, batch_size, num_nodes * input_dim).to(self.device)
+        self._logger.debug("X: {}".format(inputs.size()))  # (input_window, batch_size, num_nodes * input_dim)
+
+        if labels is not None:
+            labels = labels.permute(1, 0, 2, 3)  # (output_window, batch_size, num_nodes, output_dim)
+            labels = labels[..., :self.output_dim].contiguous().view(
+                self.output_window, batch_size, num_nodes * self.output_dim).to(self.device)
+            self._logger.debug("y: {}".format(labels.size()))
+
+        encoder_hidden_state = self.encoder_sigma(inputs)
+        # (num_layers, batch_size, self.hidden_state_size)
+        self._logger.debug("Encoder sigma complete")
+        outputs = self.decoder_sigma(encoder_hidden_state, labels, batches_seen=batches_seen)
+        # (self.output_window, batch_size, self.num_nodes * self.output_dim)
+        self._logger.debug("Decoder sigma complete")
+
+        if batches_seen == 0:
+            self._logger.info("Total trainable parameters {}".format(count_parameters(self)))
+        outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
+        return outputs
 
     def calculate_loss(self, batch, batches_seen=None):
         y_true = batch['y']
-        y_predicted, log_sigma_0 = self.forward(batch, batches_seen)
+        y_predicted = self.predict(batch, batches_seen)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        return loss.masked_mse_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum(), 0)
+        log_sigma_0 = self.forward_sigma(batch, batches_seen)
+        return loss.masked_mse_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum(), 0, self.custom_relu_eps)
 
     def calculate_eval_loss(self, batch, batches_seen=None):
         y_true = batch['y']
@@ -681,7 +658,7 @@ class BDCRNNRegVariableDecoder(AbstractTrafficStateModel, Seq2SeqAttrs):
         return loss.masked_mae_torch(y_predicted, y_true, 0)
 
     def predict(self, batch, batches_seen=None):
-        return self.forward(batch, batches_seen)[0]
+        return self.forward(batch, batches_seen)
 
     def _get_kl_sum(self):
         return self.encoder_model.get_kl_sum() + self.decoder_model.get_kl_sum()

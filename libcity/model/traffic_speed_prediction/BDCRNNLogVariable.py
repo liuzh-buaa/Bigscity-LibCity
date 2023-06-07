@@ -1,15 +1,15 @@
 import math
+from logging import getLogger
 
-import scipy.sparse as sp
-from scipy.sparse import linalg
 import numpy as np
+import scipy.sparse as sp
 import torch
 import torch.nn as nn
-from logging import getLogger
-from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
-from libcity.model import loss
 import torch.nn.functional as F
+from scipy.sparse import linalg
 
+from libcity.model import loss
+from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model.covert_dcrnn_to_b import convert_dcrnn_to_bdcrnn
 
 
@@ -81,15 +81,14 @@ class RandGCONV(nn.Module):
         self.mu_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
         self.log_sigma_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
         self.log_sigma_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
-        self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
-        self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
+        # self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
+        # self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
         init_func(self.mu_weight)
         torch.nn.init.constant_(self.mu_biases, bias_start)
         torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
         torch.nn.init.constant_(self.log_sigma_biases, math.log(sigma_start))
-        torch.nn.init.constant_(self.buffer_eps_weight, 0)
-        torch.nn.init.constant_(self.buffer_eps_bias, 0)
-        self.shared_eps = False
+        # torch.nn.init.constant_(self.buffer_eps_weight, 0)
+        # torch.nn.init.constant_(self.buffer_eps_bias, 0)
 
     @staticmethod
     def _concat(x, x_):
@@ -135,16 +134,10 @@ class RandGCONV(nn.Module):
         x = torch.reshape(x, shape=[batch_size * self._num_nodes, input_size * self._num_matrices])
 
         sigma_weight = torch.exp(self.log_sigma_weight)
-        if self.shared_eps:
-            weight = self.mu_weight + sigma_weight * self.buffer_eps_weight
-        else:
-            weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
+        weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
         x = torch.matmul(x, weight)  # (batch_size * self._num_nodes, self._output_dim)
         sigma_bias = torch.exp(self.log_sigma_biases)
-        if self.shared_eps:
-            bias = self.mu_biases + sigma_bias * self.buffer_eps_bias
-        else:
-            bias = self.mu_biases + sigma_bias * torch.randn(self.mu_biases.shape, device=self._device)
+        bias = self.mu_biases + sigma_bias * torch.randn(self.mu_biases.shape, device=self._device)
         x = x + bias
         # Reshape res back to 2D: (batch_size * num_nodes, state_dim) -> (batch_size, num_nodes * state_dim)
         return torch.reshape(x, [batch_size, self._num_nodes * self._output_dim])
@@ -155,14 +148,6 @@ class RandGCONV(nn.Module):
         kl_bias = math.log(self._sigma_pi) - self.log_sigma_biases + 0.5 * (
                 torch.exp(self.log_sigma_biases) ** 2 + self.mu_biases ** 2) / (self._sigma_pi ** 2)
         return kl_weight.sum() + kl_bias.sum()
-
-    def set_shared_eps(self):
-        self.shared_eps = True
-        torch.nn.init.normal_(self.buffer_eps_weight)
-        torch.nn.init.normal_(self.buffer_eps_bias)
-
-    def clear_shared_eps(self):
-        self.shared_eps = False
 
 
 class RandFC(nn.Module):
@@ -179,15 +164,14 @@ class RandFC(nn.Module):
         self.mu_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
         self.log_sigma_weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
         self.log_sigma_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
-        self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
-        self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
+        # self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
+        # self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
         init_func(self.mu_weight)
         torch.nn.init.constant_(self.mu_biases, bias_start)
         torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
         torch.nn.init.constant_(self.log_sigma_biases, math.log(sigma_start))
-        torch.nn.init.constant_(self.buffer_eps_weight, 0)
-        torch.nn.init.constant_(self.buffer_eps_bias, 0)
-        self.shared_eps = False
+        # torch.nn.init.constant_(self.buffer_eps_weight, 0)
+        # torch.nn.init.constant_(self.buffer_eps_bias, 0)
 
     def forward(self, inputs, state):
         batch_size = inputs.shape[0]
@@ -197,17 +181,11 @@ class RandFC(nn.Module):
         inputs_and_state = torch.cat([inputs, state], dim=-1)
         # (batch_size * self._num_nodes, input_size(input_dim+state_dim))
         sigma_weight = torch.exp(self.log_sigma_weight)
-        if self.shared_eps:
-            weight = self.mu_weight + sigma_weight * self.buffer_eps_weight
-        else:
-            weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
+        weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
         value = torch.sigmoid(torch.matmul(inputs_and_state, weight))
         # (batch_size * self._num_nodes, self._output_dim)
         sigma_bias = torch.exp(self.log_sigma_biases)
-        if self.shared_eps:
-            bias = self.mu_biases + sigma_bias * self.buffer_eps_bias
-        else:
-            bias = self.mu_biases + sigma_bias * torch.randn(self.mu_biases.shape, device=self._device)
+        bias = self.mu_biases + sigma_bias * torch.randn(self.mu_biases.shape, device=self._device)
         value = value + bias
         # Reshape res back to 2D: (batch_size * num_nodes, state_dim) -> (batch_size, num_nodes * state_dim)
         return torch.reshape(value, [batch_size, self._num_nodes * self._output_dim])
@@ -218,14 +196,6 @@ class RandFC(nn.Module):
         kl_bias = math.log(self._sigma_pi) - self.log_sigma_biases + 0.5 * (
                 torch.exp(self.log_sigma_biases) ** 2 + self.mu_biases ** 2) / (self._sigma_pi ** 2)
         return kl_weight.sum() + kl_bias.sum()
-
-    def set_shared_eps(self):
-        self.shared_eps = True
-        torch.nn.init.normal_(self.buffer_eps_weight)
-        torch.nn.init.normal_(self.buffer_eps_bias)
-
-    def clear_shared_eps(self):
-        self.shared_eps = False
 
 
 class RandLinear(nn.Module):
@@ -239,19 +209,19 @@ class RandLinear(nn.Module):
         self.out_features = out_features
         self.mu_weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
         self.log_sigma_weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
-        self.register_buffer('buffer_eps_weight', torch.Tensor(out_features, in_features))
+        # self.register_buffer('buffer_eps_weight', torch.Tensor(out_features, in_features))
         if bias:
             self.mu_bias = torch.nn.Parameter(torch.Tensor(out_features))
             self.log_sigma_bias = torch.nn.Parameter(torch.Tensor(out_features))
-            self.register_buffer('buffer_eps_bias', torch.Tensor(out_features))
+            # self.register_buffer('buffer_eps_bias', torch.Tensor(out_features))
         else:
             self.register_parameter('mu_bias', None)
             self.register_parameter('log_sigma_bias', None)
-            self.register_buffer('buffer_eps_bias', None)
+            # self.register_buffer('buffer_eps_bias', None)
 
         torch.nn.init.kaiming_uniform_(self.mu_weight, a=math.sqrt(5))
         torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
-        torch.nn.init.constant_(self.buffer_eps_weight, 0)
+        # torch.nn.init.constant_(self.buffer_eps_weight, 0)
         if self.mu_bias is not None:
             def _calculate_fan_in_and_fan_out(tensor):
                 dimensions = tensor.dim()
@@ -272,22 +242,14 @@ class RandLinear(nn.Module):
             bound = 1 / math.sqrt(fan_in)
             torch.nn.init.uniform_(self.mu_bias, -bound, bound)
             torch.nn.init.constant_(self.log_sigma_bias, math.log(sigma_start))
-            torch.nn.init.constant_(self.buffer_eps_bias, 0)
-
-        self.shared_eps = False
+            # torch.nn.init.constant_(self.buffer_eps_bias, 0)
 
     def forward(self, input):
         sigma_weight = torch.exp(self.log_sigma_weight)
-        if self.shared_eps:
-            weight = self.mu_weight + sigma_weight * self.buffer_eps_weight
-        else:
-            weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
+        weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self._device)
         if self.mu_bias is not None:
             sigma_bias = torch.exp(self.log_sigma_bias)
-            if self.shared_eps:
-                bias = self.mu_bias + sigma_bias * self.buffer_eps_bias
-            else:
-                bias = self.mu_bias + sigma_bias * torch.randn(self.mu_bias.shape, device=self._device)
+            bias = self.mu_bias + sigma_bias * torch.randn(self.mu_bias.shape, device=self._device)
         else:
             bias = None
         return F.linear(input, weight, bias)
@@ -302,14 +264,6 @@ class RandLinear(nn.Module):
             kl_bias = 0
 
         return kl_weight.sum() + kl_bias.sum()
-
-    def set_shared_eps(self):
-        self.shared_eps = True
-        torch.nn.init.normal_(self.buffer_eps_weight)
-        torch.nn.init.normal_(self.buffer_eps_bias)
-
-    def clear_shared_eps(self):
-        self.shared_eps = False
 
 
 class RandDCGRUCell(nn.Module):
@@ -361,7 +315,8 @@ class RandDCGRUCell(nn.Module):
                               hid_dim=self._num_units, output_dim=2 * self._num_units, bias_start=1.0,
                               sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
         self._gconv = RandGCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
-                                input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0,
+                                input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units,
+                                bias_start=0.0,
                                 sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
 
     @staticmethod
@@ -402,14 +357,6 @@ class RandDCGRUCell(nn.Module):
     def get_kl_sum(self):
         return self._fn.get_kl_sum() + self._gconv.get_kl_sum()
 
-    def set_shared_eps(self):
-        self._fn.set_shared_eps()
-        self._gconv.set_shared_eps()
-
-    def clear_shared_eps(self):
-        self._fn.clear_shared_eps()
-        self._gconv.clear_shared_eps()
-
 
 class Seq2SeqAttrs:
     def __init__(self, config, adj_mx):
@@ -427,6 +374,9 @@ class Seq2SeqAttrs:
         self.sigma_start = float(config.get('sigma_start'))
         self.sigma_sigma_pi = float(config.get('sigma_sigma_pi'))
         self.sigma_sigma_start = float(config.get('sigma_sigma_start'))
+        self.reg_encoder_sigma_0 = config.get('reg_encoder_sigma_0')
+        self.reg_decoder_sigma_0 = config.get('reg_decoder_sigma_0')
+        self.custom_relu_eps = float(config.get('custom_relu_eps'))
 
 
 class EncoderModel(nn.Module, Seq2SeqAttrs):
@@ -476,14 +426,6 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
             kl_sum += dcgru_layer.get_kl_sum()
         return kl_sum
 
-    def set_shared_eps(self):
-        for dcgru_layer in self.dcgru_layers:
-            dcgru_layer.set_shared_eps()
-
-    def clear_shared_eps(self):
-        for dcgru_layer in self.dcgru_layers:
-            dcgru_layer.clear_shared_eps()
-
 
 class DecoderModel(nn.Module, Seq2SeqAttrs):
     def __init__(self, config, adj_mx):
@@ -532,16 +474,6 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         for dcgru_layer in self.dcgru_layers:
             kl_sum += dcgru_layer.get_kl_sum()
         return kl_sum
-
-    def set_shared_eps(self):
-        self.projection_layer.set_shared_eps()
-        for dcgru_layer in self.dcgru_layers:
-            dcgru_layer.set_shared_eps()
-
-    def clear_shared_eps(self):
-        self.projection_layer.clear_shared_eps()
-        for dcgru_layer in self.dcgru_layers:
-            dcgru_layer.clear_shared_eps()
 
 
 class EncoderSigmaModel(nn.Module, Seq2SeqAttrs):
@@ -594,14 +526,6 @@ class EncoderSigmaModel(nn.Module, Seq2SeqAttrs):
         for dcgru_layer in self.dcgru_layers:
             kl_sum += dcgru_layer.get_kl_sum()
         return kl_sum
-
-    def set_shared_eps(self):
-        for dcgru_layer in self.dcgru_layers:
-            dcgru_layer.set_shared_eps()
-
-    def clear_shared_eps(self):
-        for dcgru_layer in self.dcgru_layers:
-            dcgru_layer.clear_shared_eps()
 
 
 class DecoderSigmaModel(nn.Module, Seq2SeqAttrs):
@@ -656,18 +580,8 @@ class DecoderSigmaModel(nn.Module, Seq2SeqAttrs):
             kl_sum += dcgru_layer.get_kl_sum()
         return kl_sum
 
-    def set_shared_eps(self):
-        self.projection_layer.set_shared_eps()
-        for dcgru_layer in self.dcgru_layers:
-            dcgru_layer.set_shared_eps()
 
-    def clear_shared_eps(self):
-        self.projection_layer.clear_shared_eps()
-        for dcgru_layer in self.dcgru_layers:
-            dcgru_layer.clear_shared_eps()
-
-
-class BDCRNNRegVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
+class BDCRNNLogVariable(AbstractTrafficStateModel, Seq2SeqAttrs):
     def __init__(self, config, data_feature):
         self.adj_mx = data_feature.get('adj_mx')
         self.num_nodes = data_feature.get('num_nodes', 1)
@@ -708,22 +622,18 @@ class BDCRNNRegVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         Returns:
             torch.tensor: (num_layers, batch_size, self.hidden_state_size)
         """
-        self.encoder_model.set_shared_eps()
         encoder_hidden_state = None
         for t in range(self.input_window):
             _, encoder_hidden_state = self.encoder_model(inputs[t], encoder_hidden_state)
             # encoder_hidden_state: encoder的多层GRU的全部的隐层 (num_layers, batch_size, self.hidden_state_size)
-        self.encoder_model.clear_shared_eps()
 
         return encoder_hidden_state  # 最后一个隐状态
 
     def encoder_sigma(self, inputs):
-        self.encoder_sigma_model.set_shared_eps()
         encoder_hidden_state = None
         for t in range(self.input_window):
             _, encoder_hidden_state = self.encoder_sigma_model(inputs[t], encoder_hidden_state)
             # encoder_hidden_state: encoder的多层GRU的全部的隐层 (num_layers, batch_size, self.hidden_state_size)
-        self.encoder_sigma_model.clear_shared_eps()
 
         return encoder_hidden_state  # 最后一个隐状态
 
@@ -740,9 +650,6 @@ class BDCRNNRegVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         Returns:
             torch.tensor: (self.output_window, batch_size, self.num_nodes * self.output_dim)
         """
-
-        self.decoder_model.set_shared_eps()
-
         batch_size = encoder_hidden_state.size(1)
         go_symbol = torch.zeros((batch_size, self.num_nodes * self.output_dim), device=self.device)
         decoder_hidden_state = encoder_hidden_state
@@ -758,14 +665,9 @@ class BDCRNNRegVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
                 if c < self._compute_sampling_threshold(batches_seen):
                     decoder_input = labels[t]  # (batch_size, self.num_nodes * self.output_dim)
         outputs = torch.stack(outputs)
-
-        self.decoder_model.clear_shared_eps()
-
         return outputs
 
     def decoder_sigma(self, encoder_hidden_state, labels=None, batches_seen=None):
-        self.decoder_sigma_model.set_shared_eps()
-
         batch_size = encoder_hidden_state.size(1)
         go_symbol = torch.zeros((batch_size, self.num_nodes * self.output_dim), device=self.device)
         decoder_hidden_state = encoder_hidden_state
@@ -781,9 +683,6 @@ class BDCRNNRegVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
                 if c < self._compute_sampling_threshold(batches_seen):
                     decoder_input = labels[t]  # (batch_size, self.num_nodes * self.output_dim)
         outputs = torch.stack(outputs)
-
-        self.decoder_sigma_model.clear_shared_eps()
-
         return outputs
 
     def forward(self, batch, batches_seen=None):
@@ -856,7 +755,7 @@ class BDCRNNRegVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         log_sigma_0 = self.forward_sigma(batch, batches_seen)
-        return loss.masked_mse_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum(), 0)
+        return loss.masked_mse_log_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum(), 0)
 
     def calculate_eval_loss(self, batch, batches_seen=None):
         y_true = batch['y']
@@ -869,7 +768,12 @@ class BDCRNNRegVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         return self.forward(batch, batches_seen)
 
     def _get_kl_sum(self):
-        return self.encoder_model.get_kl_sum() + self.decoder_model.get_kl_sum()
+        kl_sum = self.encoder_model.get_kl_sum() + self.decoder_model.get_kl_sum()
+        if self.reg_encoder_sigma_0:
+            kl_sum += self.encoder_sigma_model.get_kl_sum()
+        if self.reg_decoder_sigma_0:
+            kl_sum += self.decoder_sigma_model.get_kl_sum()
+        return kl_sum
 
 
 if __name__ == '__main__':

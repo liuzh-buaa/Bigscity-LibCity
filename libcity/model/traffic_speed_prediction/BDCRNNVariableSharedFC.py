@@ -66,7 +66,7 @@ def count_parameters(model):
 
 class RandGCONV(nn.Module):
     def __init__(self, num_nodes, max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, bias_start=0.0,
-                 sigma_pi=1.0, sigma_start=1.0):
+                 sigma_pi=1.0, sigma_start=1.0, init_func=torch.nn.init.xavier_normal_):
         super(RandGCONV, self).__init__()
         self._num_nodes = num_nodes
         self._max_diffusion_step = max_diffusion_step
@@ -83,7 +83,7 @@ class RandGCONV(nn.Module):
         self.log_sigma_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
         self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
         self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
-        torch.nn.init.xavier_normal_(self.mu_weight)
+        init_func(self.mu_weight)
         torch.nn.init.constant_(self.mu_biases, bias_start)
         torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
         torch.nn.init.constant_(self.log_sigma_biases, math.log(sigma_start))
@@ -167,7 +167,7 @@ class RandGCONV(nn.Module):
 
 class RandFC(nn.Module):
     def __init__(self, num_nodes, device, input_dim, hid_dim, output_dim, bias_start=0.0,
-                 sigma_pi=1.0, sigma_start=1.0):
+                 sigma_pi=1.0, sigma_start=1.0, init_func=torch.nn.init.xavier_normal_):
         super(RandFC, self).__init__()
         self._num_nodes = num_nodes
         self._device = device
@@ -181,7 +181,7 @@ class RandFC(nn.Module):
         self.log_sigma_biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
         self.register_buffer('buffer_eps_weight', torch.empty(*shape, device=self._device))
         self.register_buffer('buffer_eps_bias', torch.empty(self._output_dim, device=self._device))
-        torch.nn.init.xavier_normal_(self.mu_weight)
+        init_func(self.mu_weight)
         torch.nn.init.constant_(self.mu_biases, bias_start)
         torch.nn.init.constant_(self.log_sigma_weight, math.log(sigma_start))
         torch.nn.init.constant_(self.log_sigma_biases, math.log(sigma_start))
@@ -314,7 +314,8 @@ class RandLinear(nn.Module):
 
 class RandDCGRUCell(nn.Module):
     def __init__(self, input_dim, num_units, adj_mx, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
-                 filter_type="laplacian", use_gc_for_ru=True, sigma_pi=1.0, sigma_start=1.0):
+                 filter_type="laplacian", use_gc_for_ru=True, sigma_pi=1.0, sigma_start=1.0,
+                 init_func=torch.nn.init.xavier_normal_):
         """
 
         Args:
@@ -354,14 +355,14 @@ class RandDCGRUCell(nn.Module):
         if self._use_gc_for_ru:
             self._fn = RandGCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
                                  input_dim=input_dim, hid_dim=self._num_units, output_dim=2 * self._num_units,
-                                 bias_start=1.0, sigma_pi=sigma_pi, sigma_start=sigma_start)
+                                 bias_start=1.0, sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
         else:
             self._fn = RandFC(self._num_nodes, self._device, input_dim=input_dim,
                               hid_dim=self._num_units, output_dim=2 * self._num_units, bias_start=1.0,
-                              sigma_pi=sigma_pi, sigma_start=sigma_start)
+                              sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
         self._gconv = RandGCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
                                 input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0,
-                                sigma_pi=sigma_pi, sigma_start=sigma_start)
+                                sigma_pi=sigma_pi, sigma_start=sigma_start, init_func=init_func)
 
     @staticmethod
     def _build_sparse_matrix(lap, device):
@@ -424,7 +425,7 @@ class Seq2SeqAttrs:
         self.device = config.get('device', torch.device('cpu'))
         self.sigma_pi = float(config.get('sigma_pi'))
         self.sigma_start = float(config.get('sigma_start'))
-        self.sigma_0 = float(config.get('sigma_0'))
+        self.custom_relu_eps = float(config.get('custom_relu_eps'))
 
 
 class EncoderModel(nn.Module, Seq2SeqAttrs):
@@ -542,7 +543,7 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
             dcgru_layer.clear_shared_eps()
 
 
-class BDCRNNRegConstantShared(AbstractTrafficStateModel, Seq2SeqAttrs):
+class BDCRNNVariableSharedFC(AbstractTrafficStateModel, Seq2SeqAttrs):
     def __init__(self, config, data_feature):
         self.adj_mx = data_feature.get('adj_mx')
         self.num_nodes = data_feature.get('num_nodes', 1)
@@ -555,6 +556,11 @@ class BDCRNNRegConstantShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         Seq2SeqAttrs.__init__(self, config, self.adj_mx)
         self.encoder_model = EncoderModel(config, self.adj_mx)
         self.decoder_model = DecoderModel(config, self.adj_mx)
+
+        from libcity.model.traffic_speed_prediction.BDCRNNFCBase import EncoderSigmaModel
+        self.encoder_sigma_model = EncoderSigmaModel(config, self.adj_mx)
+        from libcity.model.traffic_speed_prediction.BDCRNNFCBase import DecoderSigmaModel
+        self.decoder_sigma_model = DecoderSigmaModel(config, self.adj_mx)
 
         self.use_curriculum_learning = config.get('use_curriculum_learning', False)
         self.input_window = config.get('input_window', 1)
@@ -586,6 +592,14 @@ class BDCRNNRegConstantShared(AbstractTrafficStateModel, Seq2SeqAttrs):
             _, encoder_hidden_state = self.encoder_model(inputs[t], encoder_hidden_state)
             # encoder_hidden_state: encoder的多层GRU的全部的隐层 (num_layers, batch_size, self.hidden_state_size)
         self.encoder_model.clear_shared_eps()
+
+        return encoder_hidden_state  # 最后一个隐状态
+
+    def encoder_sigma(self, inputs):
+        encoder_hidden_state = None
+        for t in range(self.input_window):
+            _, encoder_hidden_state = self.encoder_sigma_model(inputs[t], encoder_hidden_state)
+            # encoder_hidden_state: encoder的多层GRU的全部的隐层 (num_layers, batch_size, self.hidden_state_size)
 
         return encoder_hidden_state  # 最后一个隐状态
 
@@ -622,6 +636,26 @@ class BDCRNNRegConstantShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         outputs = torch.stack(outputs)
 
         self.decoder_model.clear_shared_eps()
+
+        return outputs
+
+    def decoder_sigma(self, encoder_hidden_state, labels=None, batches_seen=None):
+
+        batch_size = encoder_hidden_state.size(1)
+        go_symbol = torch.zeros((batch_size, self.num_nodes * self.output_dim), device=self.device)
+        decoder_hidden_state = encoder_hidden_state
+        decoder_input = go_symbol
+
+        outputs = []
+        for t in range(self.output_window):
+            decoder_output, decoder_hidden_state = self.decoder_sigma_model(decoder_input, decoder_hidden_state)
+            decoder_input = decoder_output  # (batch_size, self.num_nodes * self.output_dim)
+            outputs.append(decoder_output)
+            if self.training and self.use_curriculum_learning:
+                c = np.random.uniform(0, 1)
+                if c < self._compute_sampling_threshold(batches_seen):
+                    decoder_input = labels[t]  # (batch_size, self.num_nodes * self.output_dim)
+        outputs = torch.stack(outputs)
 
         return outputs
 
@@ -663,12 +697,39 @@ class BDCRNNRegConstantShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
         return outputs
 
+    def forward_sigma(self, batch, batches_seen=None):
+        inputs = batch['X']
+        labels = batch['y']
+        batch_size, _, num_nodes, input_dim = inputs.shape
+        inputs = inputs.permute(1, 0, 2, 3)  # (input_window, batch_size, num_nodes, input_dim)
+        inputs = inputs.view(self.input_window, batch_size, num_nodes * input_dim).to(self.device)
+        self._logger.debug("X: {}".format(inputs.size()))  # (input_window, batch_size, num_nodes * input_dim)
+
+        if labels is not None:
+            labels = labels.permute(1, 0, 2, 3)  # (output_window, batch_size, num_nodes, output_dim)
+            labels = labels[..., :self.output_dim].contiguous().view(
+                self.output_window, batch_size, num_nodes * self.output_dim).to(self.device)
+            self._logger.debug("y: {}".format(labels.size()))
+
+        encoder_hidden_state = self.encoder_sigma(inputs)
+        # (num_layers, batch_size, self.hidden_state_size)
+        self._logger.debug("Encoder sigma complete")
+        outputs = self.decoder_sigma(encoder_hidden_state, labels, batches_seen=batches_seen)
+        # (self.output_window, batch_size, self.num_nodes * self.output_dim)
+        self._logger.debug("Decoder sigma complete")
+
+        if batches_seen == 0:
+            self._logger.info("Total trainable parameters {}".format(count_parameters(self)))
+        outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
+        return outputs
+
     def calculate_loss(self, batch, batches_seen=None):
         y_true = batch['y']
         y_predicted = self.predict(batch, batches_seen)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        return loss.masked_mae_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum(), 0)
+        log_sigma_0 = self.forward_sigma(batch, batches_seen)
+        return loss.masked_mse_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum(), 0, self.custom_relu_eps)
 
     def calculate_eval_loss(self, batch, batches_seen=None):
         y_true = batch['y']

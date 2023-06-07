@@ -1,13 +1,18 @@
 from libcity.model.traffic_speed_prediction.DCRNN import DCRNN
-from libcity.model.traffic_speed_prediction.BDCRNNRegConstant import BDCRNNRegConstant
-from libcity.model.traffic_speed_prediction.BDCRNNRegConstantShared import BDCRNNRegConstantShared
-from libcity.model.traffic_speed_prediction.BDCRNNRegVariable import BDCRNNRegVariable
-from libcity.model.traffic_speed_prediction.BDCRNNRegVariableShared import BDCRNNRegVariableShared
-from libcity.model.traffic_speed_prediction.BDCRNNRegVariableDecoder import BDCRNNRegVariableDecoder
-from libcity.model.traffic_speed_prediction.BDCRNNRegVariableFC import BDCRNNRegVariableFC
-from libcity.model.traffic_speed_prediction.BDCRNNRegVariableSharedFC import BDCRNNRegVariableSharedFC
-from libcity.model.traffic_speed_prediction.BDCRNNRegVariableLayer import BDCRNNRegVariableLayer
-from libcity.model.traffic_speed_prediction.BDCRNNRegVariableSharedLayer import BDCRNNRegVariableSharedLayer
+from libcity.model.traffic_speed_prediction.BDCRNNConstant import BDCRNNConstant
+from libcity.model.traffic_speed_prediction.BDCRNNConstantShared import BDCRNNConstantShared
+from libcity.model.traffic_speed_prediction.BDCRNNVariable import BDCRNNVariable
+from libcity.model.traffic_speed_prediction.BDCRNNVariableShared import BDCRNNVariableShared
+from libcity.model.traffic_speed_prediction.BDCRNNLogVariable import BDCRNNLogVariable
+from libcity.model.traffic_speed_prediction.BDCRNNLogVariableShared import BDCRNNLogVariableShared
+from libcity.model.traffic_speed_prediction.BDCRNNVariableFC import BDCRNNVariableFC
+from libcity.model.traffic_speed_prediction.BDCRNNVariableSharedFC import BDCRNNVariableSharedFC
+from libcity.model.traffic_speed_prediction.BDCRNNLogVariableFC import BDCRNNLogVariableFC
+from libcity.model.traffic_speed_prediction.BDCRNNLogVariableSharedFC import BDCRNNLogVariableSharedFC
+from libcity.model.traffic_speed_prediction.BDCRNNVariableLayer import BDCRNNVariableLayer
+from libcity.model.traffic_speed_prediction.BDCRNNVariableSharedLayer import BDCRNNVariableSharedLayer
+from libcity.model.traffic_speed_prediction.BDCRNNLogVariableLayer import BDCRNNLogVariableLayer
+from libcity.model.traffic_speed_prediction.BDCRNNLogVariableSharedLayer import BDCRNNLogVariableSharedLayer
 from libcity.model.traffic_speed_prediction.STGCN import STGCN
 from libcity.model.traffic_speed_prediction.GWNET import GWNET
 from libcity.model.traffic_speed_prediction.MTGNN import MTGNN
@@ -29,15 +34,20 @@ from libcity.model.traffic_speed_prediction.FNN import FNN
 
 __all__ = [
     "DCRNN",
-    "BDCRNNRegConstant",
-    "BDCRNNRegConstantShared",
-    "BDCRNNRegVariable",
-    "BDCRNNRegVariableShared",
-    "BDCRNNRegVariableDecoder",
-    "BDCRNNRegVariableFC",
-    "BDCRNNRegVariableSharedFC",
-    "BDCRNNRegVariableLayer",
-    "BDCRNNRegVariableSharedLayer",
+    "BDCRNNConstant",
+    "BDCRNNConstantShared",
+    "BDCRNNVariable",
+    "BDCRNNVariableShared",
+    "BDCRNNLogVariable",
+    "BDCRNNLogVariableShared",
+    "BDCRNNVariableFC",
+    "BDCRNNVariableSharedFC",
+    "BDCRNNLogVariableFC",
+    "BDCRNNLogVariableSharedFC",
+    "BDCRNNVariableLayer",
+    "BDCRNNVariableSharedLayer",
+    "BDCRNNLogVariableLayer",
+    "BDCRNNLogVariableSharedLayer",
     "STGCN",
     "GWNET",
     "TGCLSTM",

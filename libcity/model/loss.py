@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import torch
 from sklearn.metrics import r2_score, explained_variance_score
@@ -29,7 +31,7 @@ def masked_mae_torch(preds, labels, null_val=np.nan):
     return torch.mean(loss)
 
 
-def masked_mae_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
+def masked_mae_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_relu_eps=0.0):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -47,7 +49,7 @@ def masked_mae_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
             前向传播，通过 ReLU 函数处理输入数据并输出
             """
             ctx.save_for_backward(input_data)
-            output = torch.clamp(input_data, min=1e-3)  # 使用 clamp() 方法将输入数据裁剪到大于等于 1e-3
+            output = torch.clamp(input_data, min=custom_relu_eps)  # 使用 clamp() 方法将输入数据裁剪到大于等于 1e-3
             return output  # 返回输出结果
 
         @staticmethod
@@ -57,13 +59,13 @@ def masked_mae_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
             """
             input_data, = ctx.saved_tensors
             grad_input = grad_output.clone()
-            grad_input[input_data < 1e-3] = 1e-3  # 根据输出对输入数据进行裁剪和梯度计算
+            grad_input[input_data < custom_relu_eps] = 0  # 根据输出对输入数据进行裁剪和梯度计算
             return grad_input
 
     if type(sigma_0) == torch.Tensor:
         sigma_0 = MyReLU.apply(sigma_0)
 
-    loss = torch.abs(torch.sub(preds, labels)) / torch.mul(sigma_0, sigma_0)
+    loss = torch.abs(torch.sub(preds, labels)) / sigma_0
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
 
@@ -72,7 +74,34 @@ def masked_mae_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
 
     valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
 
-    return torch.mean(loss) + torch.mean(sigma_0) + reg / valid_size
+    return torch.mean(loss) + torch.mean(torch.log(sigma_0)) + reg / valid_size
+
+
+def masked_mae_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
+    labels[torch.abs(labels) < 1e-4] = 0
+    if np.isnan(null_val):
+        mask = ~torch.isnan(labels)
+    else:
+        mask = labels.ne(null_val)
+    mask = mask.float()
+    mask /= torch.mean(mask)
+    mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
+
+    if type(log_sigma_0) == torch.Tensor:
+        sigma_0 = torch.exp(log_sigma_0)
+    else:
+        sigma_0 = math.exp(log_sigma_0)
+
+    loss = torch.abs(torch.sub(preds, labels)) / sigma_0
+    loss = loss * mask
+    loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
+
+    sigma_0 = sigma_0 * mask
+    sigma_0 = torch.where(mask == 0, torch.zeros_like(sigma_0), sigma_0)
+
+    valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    return torch.mean(loss) + torch.mean(torch.log(sigma_0)) + reg / valid_size
 
 
 def log_cosh_loss(preds, labels):
@@ -130,7 +159,7 @@ def masked_mse_torch(preds, labels, null_val=np.nan):
     return torch.mean(loss)
 
 
-def masked_mse_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
+def masked_mse_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_relu_eps=0.0):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -148,7 +177,7 @@ def masked_mse_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
             前向传播，通过 ReLU 函数处理输入数据并输出
             """
             ctx.save_for_backward(input_data)
-            output = torch.clamp(input_data, min=1e-3)  # 使用 clamp() 方法将输入数据裁剪到大于等于 1e-3
+            output = torch.clamp(input_data, min=custom_relu_eps)  # 使用 clamp() 方法将输入数据裁剪到大于等于 1e-3
             return output  # 返回输出结果
 
         @staticmethod
@@ -158,7 +187,7 @@ def masked_mse_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
             """
             input_data, = ctx.saved_tensors
             grad_input = grad_output.clone()
-            grad_input[input_data < 1e-3] = 1e-3  # 根据输出对输入数据进行裁剪和梯度计算
+            grad_input[input_data < custom_relu_eps] = 0  # 根据输出对输入数据进行裁剪和梯度计算
             return grad_input
 
     if type(sigma_0) == torch.Tensor:
@@ -173,7 +202,34 @@ def masked_mse_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
 
     valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
 
-    return torch.mean(loss) + torch.mean(sigma_0) + reg / valid_size
+    return torch.mean(loss) + torch.mean(torch.log(sigma_0)) + reg / valid_size
+
+
+def masked_mse_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
+    labels[torch.abs(labels) < 1e-4] = 0
+    if np.isnan(null_val):
+        mask = ~torch.isnan(labels)
+    else:
+        mask = labels.ne(null_val)
+    mask = mask.float()
+    mask /= torch.mean(mask)
+    mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
+
+    if type(log_sigma_0) == torch.Tensor:
+        sigma_0 = torch.exp(log_sigma_0)
+    else:
+        sigma_0 = math.exp(log_sigma_0)
+
+    loss = torch.square(torch.sub(preds, labels)) / 2 / torch.mul(sigma_0, sigma_0)
+    loss = loss * mask
+    loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
+
+    sigma_0 = sigma_0 * mask
+    sigma_0 = torch.where(mask == 0, torch.zeros_like(sigma_0), sigma_0)
+
+    valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    return torch.mean(loss) + torch.mean(torch.log(sigma_0)) + reg / valid_size
 
 
 def masked_rmse_torch(preds, labels, null_val=np.nan):
