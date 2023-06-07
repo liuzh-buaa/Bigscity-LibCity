@@ -63,18 +63,20 @@ def masked_mae_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_re
             return grad_input
 
     if type(sigma_0) == torch.Tensor:
-        sigma_0 = MyReLU.apply(sigma_0)
+        log_sigma_0 = torch.log(MyReLU.apply(sigma_0))
+    else:
+        log_sigma_0 = math.log(sigma_0)
 
     loss = torch.abs(torch.sub(preds, labels)) / sigma_0
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
 
-    sigma_0 = sigma_0 * mask
-    sigma_0 = torch.where(mask == 0, torch.zeros_like(sigma_0), sigma_0)
+    log_sigma_0 = log_sigma_0 * mask
+    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
 
     valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
 
-    return torch.mean(loss) + torch.mean(torch.log(sigma_0)) + reg / valid_size
+    return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 
 
 def masked_mae_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
@@ -191,18 +193,20 @@ def masked_mse_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_re
             return grad_input
 
     if type(sigma_0) == torch.Tensor:
-        sigma_0 = MyReLU.apply(sigma_0)
+        log_sigma_0 = torch.log(MyReLU.apply(sigma_0))
+    else:
+        log_sigma_0 = math.log(sigma_0)
 
     loss = torch.square(torch.sub(preds, labels)) / 2 / torch.mul(sigma_0, sigma_0)
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
 
-    sigma_0 = sigma_0 * mask
-    sigma_0 = torch.where(mask == 0, torch.zeros_like(sigma_0), sigma_0)
+    log_sigma_0 = log_sigma_0 * mask
+    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
 
     valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
 
-    return torch.mean(loss) + torch.mean(torch.log(sigma_0)) + reg / valid_size
+    return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 
 
 def masked_mse_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
