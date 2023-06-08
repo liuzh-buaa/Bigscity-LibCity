@@ -63,7 +63,8 @@ def masked_mae_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_re
             return grad_input
 
     if type(sigma_0) == torch.Tensor:
-        log_sigma_0 = torch.log(MyReLU.apply(sigma_0))
+        sigma_0 = MyReLU.apply(sigma_0)
+        log_sigma_0 = torch.log(sigma_0)
     else:
         log_sigma_0 = math.log(sigma_0)
 
@@ -193,7 +194,8 @@ def masked_mse_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_re
             return grad_input
 
     if type(sigma_0) == torch.Tensor:
-        log_sigma_0 = torch.log(MyReLU.apply(sigma_0))
+        sigma_0 = MyReLU.apply(sigma_0)
+        log_sigma_0 = torch.log(sigma_0)
     else:
         log_sigma_0 = math.log(sigma_0)
 
