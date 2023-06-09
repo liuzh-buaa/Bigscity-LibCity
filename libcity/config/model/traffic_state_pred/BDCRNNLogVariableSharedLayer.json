@@ -28,11 +28,10 @@
 
   "loss_function": "masked_mae",
 
-  "sigma_pi": 0.1,
-  "sigma_start": 0.1,
+  "sigma_pi": 0.01,
+  "sigma_start": 0.01,
 
   "evaluate_rep": 30,
 
-  "init_params_from_dcrnn": false,
-  "custom_relu_eps": 0.01
+  "init_params_from_dcrnn": false
 }

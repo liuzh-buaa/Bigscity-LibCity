@@ -28,15 +28,14 @@
 
   "loss_function": "masked_mae",
 
-  "sigma_pi": 0.1,
-  "sigma_start": 0.1,
-  "sigma_sigma_pi": 0.1,
-  "sigma_sigma_start": 0.1,
+  "sigma_pi": 0.01,
+  "sigma_start": 0.01,
+  "sigma_sigma_pi": 0.01,
+  "sigma_sigma_start": 0.01,
 
   "evaluate_rep": 30,
 
   "init_params_from_dcrnn": false,
   "reg_encoder_sigma_0": false,
-  "reg_decoder_sigma_0": false,
-  "custom_relu_eps": 0.01
+  "reg_decoder_sigma_0": false
 }

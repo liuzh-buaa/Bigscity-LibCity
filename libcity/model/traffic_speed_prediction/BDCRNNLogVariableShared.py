@@ -429,7 +429,6 @@ class Seq2SeqAttrs:
         self.sigma_sigma_start = float(config.get('sigma_sigma_start'))
         self.reg_encoder_sigma_0 = config.get('reg_encoder_sigma_0')
         self.reg_decoder_sigma_0 = config.get('reg_decoder_sigma_0')
-        self.custom_relu_eps = float(config.get('custom_relu_eps'))
         self.loss_function = config.get('loss_function')
 
 

@@ -426,7 +426,6 @@ class Seq2SeqAttrs:
         self.device = config.get('device', torch.device('cpu'))
         self.sigma_pi = float(config.get('sigma_pi'))
         self.sigma_start = float(config.get('sigma_start'))
-        self.custom_relu_eps = float(config.get('custom_relu_eps'))
         self.loss_function = config.get('loss_function')
 
 
