@@ -425,6 +425,7 @@ class Seq2SeqAttrs:
         self.sigma_pi = float(config.get('sigma_pi'))
         self.sigma_start = float(config.get('sigma_start'))
         self.sigma_0 = float(config.get('sigma_0'))
+        self.loss_function = config.get('loss_function')
 
 
 class EncoderModel(nn.Module, Seq2SeqAttrs):
@@ -668,7 +669,12 @@ class BDCRNNConstantShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         y_predicted = self.predict(batch, batches_seen)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        return loss.masked_mae_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum(), 0)
+        if self.loss_function == 'masked_mae':
+            return loss.masked_mae_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum(), 0)
+        elif self.loss_function == 'masked_mse':
+            return loss.masked_mse_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum(), 0)
+        else:
+            raise NotImplementedError('Unrecognized loss function.')
 
     def calculate_eval_loss(self, batch, batches_seen=None):
         y_true = batch['y']

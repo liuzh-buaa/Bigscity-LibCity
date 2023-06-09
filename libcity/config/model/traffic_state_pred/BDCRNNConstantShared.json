@@ -26,6 +26,8 @@
   "use_early_stop": true,
   "patience": 50,
 
+  "loss_function": "masked_mae",
+
   "sigma_pi": 0.01,
   "sigma_start": 0.01,
   "sigma_0": 0.0001,
