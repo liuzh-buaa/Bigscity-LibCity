@@ -28,7 +28,7 @@
 
   "sigma_pi": 0.01,
   "sigma_start": 0.01,
-  "sigma_0": 0.01,
+  "sigma_0": 0.0001,
 
   "evaluate_rep": 30,
 
