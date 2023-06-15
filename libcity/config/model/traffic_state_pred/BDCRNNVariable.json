@@ -27,6 +27,7 @@
   "patience": 50,
 
   "loss_function": "masked_mae",
+  "clamp_function": "relu_0.0001",
 
   "sigma_pi": 0.01,
   "sigma_start": 0.01,
@@ -37,6 +38,5 @@
 
   "init_params_from_dcrnn": false,
   "reg_encoder_sigma_0": false,
-  "reg_decoder_sigma_0": false,
-  "custom_relu_eps": 0.0001
+  "reg_decoder_sigma_0": false
 }

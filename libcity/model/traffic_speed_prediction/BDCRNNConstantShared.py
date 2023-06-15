@@ -670,9 +670,9 @@ class BDCRNNConstantShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         if self.loss_function == 'masked_mae':
-            return loss.masked_mae_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum(), 0)
+            return loss.masked_mae_const_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum())
         elif self.loss_function == 'masked_mse':
-            return loss.masked_mse_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum(), 0)
+            return loss.masked_mse_const_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum())
         else:
             raise NotImplementedError('Unrecognized loss function.')
 

@@ -31,7 +31,31 @@ def masked_mae_torch(preds, labels, null_val=np.nan):
     return torch.mean(loss)
 
 
-def masked_mae_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_relu_eps=0.0):
+def masked_mae_const_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
+    labels[torch.abs(labels) < 1e-4] = 0
+    if np.isnan(null_val):
+        mask = ~torch.isnan(labels)
+    else:
+        mask = labels.ne(null_val)
+    mask = mask.float()
+    mask /= torch.mean(mask)
+    mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
+
+    log_sigma_0 = math.log(sigma_0)
+
+    loss = torch.abs(torch.sub(preds, labels)) / sigma_0
+    loss = loss * mask
+    loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
+
+    log_sigma_0 = log_sigma_0 * mask
+    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
+
+    valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
+
+
+def masked_mae_relu_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_relu_eps=0.0):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -62,11 +86,33 @@ def masked_mae_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_re
             grad_input[input_data < custom_relu_eps] = 0  # 根据输出对输入数据进行裁剪和梯度计算
             return grad_input
 
-    if type(sigma_0) == torch.Tensor:
-        sigma_0 = MyReLU.apply(sigma_0)
-        log_sigma_0 = torch.log(sigma_0)
+    sigma_0 = MyReLU.apply(sigma_0)
+    log_sigma_0 = torch.log(sigma_0)
+
+    loss = torch.abs(torch.sub(preds, labels)) / sigma_0
+    loss = loss * mask
+    loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
+
+    log_sigma_0 = log_sigma_0 * mask
+    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
+
+    valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
+
+
+def masked_mae_softplus_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_softplus_beta=1):
+    labels[torch.abs(labels) < 1e-4] = 0
+    if np.isnan(null_val):
+        mask = ~torch.isnan(labels)
     else:
-        log_sigma_0 = math.log(sigma_0)
+        mask = labels.ne(null_val)
+    mask = mask.float()
+    mask /= torch.mean(mask)
+    mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
+
+    sigma_0 = torch.nn.Softplus(beta=custom_softplus_beta)(sigma_0)
+    log_sigma_0 = torch.log(sigma_0)
 
     loss = torch.abs(torch.sub(preds, labels)) / sigma_0
     loss = loss * mask
@@ -161,8 +207,31 @@ def masked_mse_torch(preds, labels, null_val=np.nan):
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
     return torch.mean(loss)
 
+def masked_mse_const_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
+    labels[torch.abs(labels) < 1e-4] = 0
+    if np.isnan(null_val):
+        mask = ~torch.isnan(labels)
+    else:
+        mask = labels.ne(null_val)
+    mask = mask.float()
+    mask /= torch.mean(mask)
+    mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
 
-def masked_mse_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_relu_eps=0.0):
+    log_sigma_0 = math.log(sigma_0)
+
+    loss = torch.square(torch.sub(preds, labels)) / 2 / torch.mul(sigma_0, sigma_0)
+    loss = loss * mask
+    loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
+
+    log_sigma_0 = log_sigma_0 * mask
+    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
+
+    valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
+
+
+def masked_mse_relu_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_relu_eps=0.0):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -193,11 +262,33 @@ def masked_mse_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_re
             grad_input[input_data < custom_relu_eps] = 0  # 根据输出对输入数据进行裁剪和梯度计算
             return grad_input
 
-    if type(sigma_0) == torch.Tensor:
-        sigma_0 = MyReLU.apply(sigma_0)
-        log_sigma_0 = torch.log(sigma_0)
+    sigma_0 = MyReLU.apply(sigma_0)
+    log_sigma_0 = torch.log(sigma_0)
+
+    loss = torch.square(torch.sub(preds, labels)) / 2 / torch.mul(sigma_0, sigma_0)
+    loss = loss * mask
+    loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
+
+    log_sigma_0 = log_sigma_0 * mask
+    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
+
+    valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
+
+
+def masked_mse_softplus_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_softplus_beta=1):
+    labels[torch.abs(labels) < 1e-4] = 0
+    if np.isnan(null_val):
+        mask = ~torch.isnan(labels)
     else:
-        log_sigma_0 = math.log(sigma_0)
+        mask = labels.ne(null_val)
+    mask = mask.float()
+    mask /= torch.mean(mask)
+    mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
+
+    sigma_0 = torch.nn.Softplus(custom_softplus_beta)(sigma_0)
+    log_sigma_0 = torch.log(sigma_0)
 
     loss = torch.square(torch.sub(preds, labels)) / 2 / torch.mul(sigma_0, sigma_0)
     loss = loss * mask

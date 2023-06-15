@@ -33,5 +33,5 @@
 
   "init_params_from_dcrnn": false,
   "loss_function": "masked_mae",
-  "custom_relu_eps": 0.0001
+  "clamp_function": "relu_0.0001"
 }
