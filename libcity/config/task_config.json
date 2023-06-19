@@ -87,6 +87,7 @@
             "BDCRNNVariable", "BDCRNNVariableShared", "BDCRNNLogVariable", "BDCRNNLogVariableShared",
             "BDCRNNVariableFC", "BDCRNNVariableSharedFC", "BDCRNNLogVariableFC", "BDCRNNLogVariableSharedFC",
             "BDCRNNVariableLayer", "BDCRNNVariableSharedLayer", "BDCRNNLogVariableLayer", "BDCRNNLogVariableSharedLayer",
+            "BDCRNNVariableDecoder", "BDCRNNVariableDecoderShared",
             "DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
             "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet", "RNN", "LSTM", "GRU", "AutoEncoder", "Seq2Seq",
             "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon", "ToGCN", "CONVGCN", "STG2Seq",
@@ -170,6 +171,16 @@
             "evaluator": "TrafficStateEvaluator"
         },
         "BDCRNNLogVariableSharedLayer": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "BDCRNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "BDCRNNVariableDecoder": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "BDCRNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "BDCRNNVariableDecoderShared": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "BDCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
