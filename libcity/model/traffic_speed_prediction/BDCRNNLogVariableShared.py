@@ -779,10 +779,10 @@ class BDCRNNLogVariableShared(AbstractTrafficStateModel, Seq2SeqAttrs):
             decoder_output, decoder_hidden_state = self.decoder_sigma_model(decoder_input, decoder_hidden_state)
             decoder_input = decoder_output  # (batch_size, self.num_nodes * self.output_dim)
             outputs.append(decoder_output)
-            if self.training and self.use_curriculum_learning:
-                c = np.random.uniform(0, 1)
-                if c < self._compute_sampling_threshold(batches_seen):
-                    decoder_input = labels[t]  # (batch_size, self.num_nodes * self.output_dim)
+            # if self.training and self.use_curriculum_learning:
+            #     c = np.random.uniform(0, 1)
+            #     if c < self._compute_sampling_threshold(batches_seen):
+            #         decoder_input = labels[t]  # (batch_size, self.num_nodes * self.output_dim)
         outputs = torch.stack(outputs)
 
         self.decoder_sigma_model.clear_shared_eps()
