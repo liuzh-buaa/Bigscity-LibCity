@@ -36,6 +36,8 @@
   "evaluate_rep": 30,
 
   "init_params_from_dcrnn": false,
+  "reg_encoder": true,
+  "reg_decoder": true,
   "reg_encoder_sigma_0": false,
   "reg_decoder_sigma_0": false
 }

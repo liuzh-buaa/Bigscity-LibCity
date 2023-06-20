@@ -32,6 +32,8 @@
   "evaluate_rep": 30,
 
   "init_params_from_dcrnn": false,
+  "reg_encoder": true,
+  "reg_decoder": true,
   "loss_function": "masked_mae",
   "clamp_function": "relu_0.0001"
 }

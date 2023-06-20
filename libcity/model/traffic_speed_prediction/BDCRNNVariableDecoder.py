@@ -374,6 +374,8 @@ class Seq2SeqAttrs:
         self.sigma_start = float(config.get('sigma_start'))
         self.sigma_sigma_pi = float(config.get('sigma_sigma_pi'))
         self.sigma_sigma_start = float(config.get('sigma_sigma_start'))
+        self.reg_encoder = config.get('reg_encoder')
+        self.reg_decoder = config.get('reg_decoder')
         self.reg_decoder_sigma_0 = config.get('reg_decoder_sigma_0')
         self.loss_function = config.get('loss_function')
         self.clamp_function = config.get('clamp_function')
@@ -696,7 +698,11 @@ class BDCRNNVariableDecoder(AbstractTrafficStateModel, Seq2SeqAttrs):
         return self.forward(batch, batches_seen)[0]
 
     def _get_kl_sum(self):
-        kl_sum = self.encoder_model.get_kl_sum() + self.decoder_model.get_kl_sum()
+        kl_sum = 0
+        if self.reg_encoder:
+            kl_sum += self.encoder_model.get_kl_sum()
+        if self.reg_decoder:
+            kl_sum += self.decoder_model.get_kl_sum()
         if self.reg_decoder_sigma_0:
             kl_sum += self.decoder_sigma_model.get_kl_sum()
         return kl_sum

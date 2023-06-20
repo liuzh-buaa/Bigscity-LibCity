@@ -425,6 +425,8 @@ class Seq2SeqAttrs:
         self.device = config.get('device', torch.device('cpu'))
         self.sigma_pi = float(config.get('sigma_pi'))
         self.sigma_start = float(config.get('sigma_start'))
+        self.reg_encoder = config.get('reg_encoder')
+        self.reg_decoder = config.get('reg_decoder')
         self.loss_function = config.get('loss_function')
 
 
@@ -747,7 +749,12 @@ class BDCRNNLogVariableSharedFC(AbstractTrafficStateModel, Seq2SeqAttrs):
         return self.forward(batch, batches_seen)
 
     def _get_kl_sum(self):
-        return self.encoder_model.get_kl_sum() + self.decoder_model.get_kl_sum()
+        kl_sum = 0
+        if self.reg_encoder:
+            kl_sum += self.encoder_model.get_kl_sum()
+        if self.reg_decoder:
+            kl_sum += self.decoder_model.get_kl_sum()
+        return kl_sum
 
 
 if __name__ == '__main__':
