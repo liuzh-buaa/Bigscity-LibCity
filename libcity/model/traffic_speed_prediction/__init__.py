@@ -14,7 +14,9 @@ from libcity.model.traffic_speed_prediction.BDCRNNVariableSharedLayer import BDC
 from libcity.model.traffic_speed_prediction.BDCRNNLogVariableLayer import BDCRNNLogVariableLayer
 from libcity.model.traffic_speed_prediction.BDCRNNLogVariableSharedLayer import BDCRNNLogVariableSharedLayer
 from libcity.model.traffic_speed_prediction.BDCRNNVariableDecoder import BDCRNNVariableDecoder
+from libcity.model.traffic_speed_prediction.BDCRNNVariableDecoderFC import BDCRNNVariableDecoderFC
 from libcity.model.traffic_speed_prediction.BDCRNNVariableDecoderShared import BDCRNNVariableDecoderShared
+from libcity.model.traffic_speed_prediction.BDCRNNVariableDecoderSharedFC import BDCRNNVariableDecoderSharedFC
 from libcity.model.traffic_speed_prediction.STGCN import STGCN
 from libcity.model.traffic_speed_prediction.GWNET import GWNET
 from libcity.model.traffic_speed_prediction.MTGNN import MTGNN
@@ -51,7 +53,9 @@ __all__ = [
     "BDCRNNLogVariableLayer",
     "BDCRNNLogVariableSharedLayer",
     "BDCRNNVariableDecoder",
+    "BDCRNNVariableDecoderFC",
     "BDCRNNVariableDecoderShared",
+    "BDCRNNVariableDecoderSharedFC",
     "STGCN",
     "GWNET",
     "TGCLSTM",
