@@ -1,11 +1,13 @@
+import os
 import time
+from functools import partial
+
 import numpy as np
 import torch
-import os
 from ray import tune
-from libcity.model import loss
-from functools import partial
+
 from libcity.executor.traffic_state_executor import TrafficStateExecutor
+from libcity.model import loss
 
 
 class BDCRNNExecutor(TrafficStateExecutor):
@@ -64,6 +66,46 @@ class BDCRNNExecutor(TrafficStateExecutor):
             return lf(y_predicted, y_true)
 
         return func
+
+    def evaluate(self, test_dataloader):
+        """
+        use model to test data
+
+        Args:
+            test_dataloader(torch.Dataloader): Dataloader
+        """
+        self._logger.info('Start evaluating ...')
+        with torch.no_grad():
+            self.model.eval()
+            # self.evaluator.clear()
+            y_truths = []
+            y_preds = []
+            pre_outputs = []
+            for batch in test_dataloader:
+                batch.to_tensor(self.device)
+                pre_output = torch.stack([self.model.predict(batch).detach().clone() for _ in range(self.evaluate_rep)])
+                output = torch.mean(pre_output, dim=0)
+                y_true = self._scaler.inverse_transform(batch['y'][..., :self.output_dim])
+                y_pred = self._scaler.inverse_transform(output[..., :self.output_dim])
+                pre_output = self._scaler.inverse_transform(pre_output[..., :self.output_dim])
+                y_truths.append(y_true.cpu().numpy())
+                y_preds.append(y_pred.cpu().numpy())
+                pre_outputs.append(pre_output.cpu().numpy())
+                # evaluate_input = {'y_true': y_true, 'y_pred': y_pred}
+                # self.evaluator.collect(evaluate_input)
+            # self.evaluator.save_result(self.evaluate_res_dir)
+            y_preds = np.concatenate(y_preds, axis=0)
+            y_truths = np.concatenate(y_truths, axis=0)
+            pre_outputs = np.concatenate(pre_outputs, axis=0)  # concatenate on batch
+            outputs = {'prediction': y_preds, 'truth': y_truths, 'pre_outputs': pre_outputs}
+            filename = \
+                time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime(time.time())) + '_' \
+                + self.config['model'] + '_' + self.config['dataset'] + '_predictions.npz'
+            np.savez_compressed(os.path.join(self.evaluate_res_dir, filename), **outputs)
+            self.evaluator.clear()
+            self.evaluator.collect({'y_true': torch.tensor(y_truths), 'y_pred': torch.tensor(y_preds)})
+            test_result = self.evaluator.save_result(self.evaluate_res_dir)
+            return test_result
 
     def train(self, train_dataloader, eval_dataloader):
         """
