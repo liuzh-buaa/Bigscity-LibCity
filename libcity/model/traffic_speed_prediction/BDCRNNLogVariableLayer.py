@@ -112,3 +112,6 @@ class BDCRNNLogVariableLayer(BDCRNNBase):
 
     def predict(self, batch, batches_seen=None):
         return self.forward(batch, batches_seen)[0]
+
+    def predict_sigma(self, batch, batches_seen=None):
+        return self.forward(batch, batches_seen)[1]

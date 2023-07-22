@@ -167,3 +167,6 @@ class BDCRNNLogVariableFC(BDCRNNBase):
 
     def predict(self, batch, batches_seen=None):
         return self.forward(batch, batches_seen)
+
+    def predict_sigma(self, batch, batches_seen=None):
+        return torch.exp(self.forward_sigma(batch, batches_seen))

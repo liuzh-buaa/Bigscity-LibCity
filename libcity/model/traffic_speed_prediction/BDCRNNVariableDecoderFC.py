@@ -141,3 +141,8 @@ class BDCRNNVariableDecoderFC(BDCRNNBase):
 
     def predict(self, batch, batches_seen=None):
         return self.forward(batch, batches_seen)[0]
+
+    def predict_sigma(self, batch, batches_seen=None):
+        ll = self.clamp_function.split('_')
+        assert ll[0] == 'relu'
+        return torch.clamp(self.forward(batch, batches_seen)[1], min=float(ll[1]))

@@ -264,6 +264,9 @@ class BDCRNNConstant(AbstractTrafficStateModel, Seq2SeqAttrs):
     def predict(self, batch, batches_seen=None):
         return self.forward(batch, batches_seen)
 
+    def predict_sigma(self, batch, batches_seen=None):
+        return self.sigma_0
+
     def _get_kl_sum(self):
         kl_sum = 0
         if self.reg_encoder:
