@@ -175,5 +175,9 @@ class BDCRNNVariableFC(BDCRNNBase):
 
     def predict_sigma(self, batch, batches_seen=None):
         ll = self.clamp_function.split('_')
-        assert ll[0] == 'relu'
-        return torch.clamp(self.forward_sigma(batch, batches_seen), min=float(ll[1]))
+        if ll[0] == 'relu':
+            return torch.clamp(self.forward_sigma(batch, batches_seen), min=float(ll[1]))
+        elif ll[0] == 'Softplus':
+            return torch.nn.Softplus(beta=int(ll[1]))(self.forward_sigma(batch, batches_seen))
+        else:
+            raise NotImplementedError('Unrecognized loss function.')
