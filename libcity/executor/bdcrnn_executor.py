@@ -82,7 +82,7 @@ class BDCRNNExecutor(TrafficStateExecutor):
             for batch in test_dataloader:
                 batch.to_tensor(self.device)
                 output = torch.stack([self.model.predict(batch).detach().clone() for _ in range(self.evaluate_rep)])
-                sigma = torch.stack([self.model.predict_sigma(batch).detach().clone for _ in range(self.evaluate_rep)])
+                sigma = torch.stack([self.model.predict_sigma(batch).detach().clone() for _ in range(self.evaluate_rep)])
                 y_pred = torch.mean(output, dim=0)
                 y_true = self._scaler.inverse_transform(batch['y'][..., :self.output_dim])
                 y_pred = self._scaler.inverse_transform(y_pred[..., :self.output_dim])
