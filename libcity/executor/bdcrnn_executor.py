@@ -96,7 +96,7 @@ class BDCRNNExecutor(TrafficStateExecutor):
             # self.evaluator.save_result(self.evaluate_res_dir)
             y_preds = np.concatenate(y_preds, axis=0)
             y_truths = np.concatenate(y_truths, axis=0)
-            pre_outputs = np.concatenate(pre_outputs, axis=0)  # concatenate on batch
+            pre_outputs = np.concatenate(pre_outputs, axis=1)  # concatenate on batch
             outputs = {'prediction': y_preds, 'truth': y_truths, 'pre_outputs': pre_outputs}
             filename = \
                 time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime(time.time())) + '_' \
