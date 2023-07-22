@@ -268,15 +268,15 @@ class BDCRNNConstantShared(AbstractTrafficStateModel, Seq2SeqAttrs):
         outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
         return outputs
 
-    def calculate_loss(self, batch, batches_seen=None):
+    def calculate_loss(self, batch, batches_seen=None, num_batches=1):
         y_true = batch['y']
         y_predicted = self.predict(batch, batches_seen)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         if self.loss_function == 'masked_mae':
-            return loss.masked_mae_const_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum())
+            return loss.masked_mae_const_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum() / num_batches)
         elif self.loss_function == 'masked_mse':
-            return loss.masked_mse_const_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum())
+            return loss.masked_mse_const_reg_torch(y_predicted, y_true, self.sigma_0, self._get_kl_sum() / num_batches)
         else:
             raise NotImplementedError('Unrecognized loss function.')
 

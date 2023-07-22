@@ -323,7 +323,7 @@ class BDCRNNBase(AbstractTrafficStateModel, Seq2SeqAttrs):
     def predict(self, batch, batches_seen=None):
         raise NotImplementedError('BDCRNN predict not implemented.')
 
-    def calculate_loss(self, batch):
+    def calculate_loss(self, batch, batches_seen=None, num_batches=1):
         raise NotImplementedError('BDCRNN calculate_loss not implemented.')
 
     def calculate_eval_loss(self, batch, batches_seen=None):

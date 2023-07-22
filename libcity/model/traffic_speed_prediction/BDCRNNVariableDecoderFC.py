@@ -122,20 +122,20 @@ class BDCRNNVariableDecoderFC(BDCRNNBase):
         sigma_0 = sigma_0.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
         return outputs, sigma_0
 
-    def calculate_loss(self, batch, batches_seen=None):
+    def calculate_loss(self, batch, batches_seen=None, num_batches=1):
         y_true = batch['y']
         y_predicted, sigma_0 = self.forward(batch, batches_seen)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         ll = self.clamp_function.split('_')
         if self.loss_function == 'masked_mae' and ll[0] == 'relu':
-            return loss.masked_mae_relu_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum(), 0, float(ll[1]))
+            return loss.masked_mae_relu_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, float(ll[1]))
         elif self.loss_function == 'masked_mae' and ll[0] == 'Softplus':
-            return loss.masked_mae_softplus_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum(), 0, int(ll[1]))
+            return loss.masked_mae_softplus_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, int(ll[1]))
         elif self.loss_function == 'masked_mse' and ll[0] == 'relu':
-            return loss.masked_mse_relu_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum(), 0, float(ll[1]))
+            return loss.masked_mse_relu_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, float(ll[1]))
         elif self.loss_function == 'masked_mse' and ll[0] == 'Softplus':
-            return loss.masked_mse_softplus_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum(), 0, int(ll[1]))
+            return loss.masked_mse_softplus_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, int(ll[1]))
         else:
             raise NotImplementedError('Unrecognized loss function.')
 

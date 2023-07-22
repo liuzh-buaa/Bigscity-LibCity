@@ -152,16 +152,16 @@ class BDCRNNLogVariableFC(BDCRNNBase):
         outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
         return outputs
 
-    def calculate_loss(self, batch, batches_seen=None):
+    def calculate_loss(self, batch, batches_seen=None, num_batches=1):
         y_true = batch['y']
         y_predicted = self.predict(batch, batches_seen)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         log_sigma_0 = self.forward_sigma(batch, batches_seen)
         if self.loss_function == 'masked_mae':
-            return loss.masked_mae_log_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum(), 0)
+            return loss.masked_mae_log_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum() / num_batches, 0)
         elif self.loss_function == 'masked_mse':
-            return loss.masked_mse_log_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum(), 0)
+            return loss.masked_mse_log_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum() / num_batches, 0)
         else:
             raise NotImplementedError('Unrecognized loss function.')
 

@@ -2,6 +2,8 @@ import argparse
 import os.path
 
 import numpy as np
+import pandas as pd
+import torch
 
 from libcity.config import ConfigParser
 from libcity.utils import get_logger, ensure_dir
@@ -40,15 +42,35 @@ if __name__ == '__main__':
             visited = True
 
     assert visited
-    prediction, truth, pre_outputs = arr['prediction'], arr['truth'], arr['pre_outputs']
-    logger.info('pre_outputs shape: ', pre_outputs.shape)
-    logger.info('prediction shape: ', prediction.shape)
-    logger.info('truth shape: ', truth.shape)
+    prediction, truth, outputs, sigmas = arr['prediction'], arr['truth'], arr['outputs'], arr['sigmas']
+    logger.info(f'prediction shape: {prediction.shape}')
+    logger.info(f'truth shape: {truth.shape}')
+    logger.info(f'outputs shape: {outputs.shape}')
+    logger.info(f'sigmas shape: {sigmas.shape}')
 
-    evaluate_rep, num_data, output_window, num_nodes, output_dim = pre_outputs.shape
-    assert output_dim == 1
-    prediction, truth, pre_outputs = prediction[..., 0], truth[..., 0], pre_outputs[..., 0]
+    evaluate_rep, num_data, output_window, num_nodes, output_dim = outputs.shape
+    assert outputs.shape == sigmas.shape and output_dim == 1
+    prediction, truth, outputs, sigmas = prediction[..., 0], truth[..., 0], outputs[..., 0], sigmas[..., 0]
     for i in range(num_nodes):
-        # (num_data, output_window), (num_data, output_window), (evaluate_rep, num_data, output_window)
-        prediction_node, truth_node, pre_outputs_node = prediction[:, :, i], truth[:, :, i], pre_outputs[:, :, :, i]
-        print('ok')
+        # (num_data, output_window), (evaluate_rep, num_data, output_window)
+        prediction_node, truth_node, outputs_node, sigmas_node = prediction[:, :, i], truth[:, :, i], \
+                                                                 outputs[:, :, :, i], sigmas[:, :, :, i]
+        sigmas_node_2 = sigmas_node * sigmas_node
+        outputs_node_2 = outputs_node * outputs_node
+        prediction_node_2 = prediction_node * prediction_node
+        writer = pd.ExcelWriter(f'{analyze_cache_dir}/{dataset_name}_node_{i}.xlsx')
+        for j in range(output_window):
+            p, t, o, s = prediction_node[:, j], truth_node[:, j], outputs_node[:, :, j], sigmas_node[:, :, j]
+            p2, s2, o2 = prediction_node_2[:, j], sigmas_node_2[:, :, j], outputs_node_2[:, :, j]
+            error = p - t
+            a_uncertainty = 1 / evaluate_rep * np.sum(s2, axis=0)
+            e_uncertainty = 1 / evaluate_rep * np.sum(o2, axis=0) - p2
+            uncertainty = a_uncertainty + e_uncertainty
+            res = np.stack((p, t, error, uncertainty, a_uncertainty, e_uncertainty), axis=1)
+            res = np.concatenate((res, o.T, s.T), axis=1)
+            columns_name = ['pred', 'truth', 'error', 'uncertainty', 'a_uncertainty', 'e_uncertainty']
+            columns_name.extend(['output_{}'.format(i) for i in range(evaluate_rep)])
+            columns_name.extend(['sigma_{}'.format(i) for i in range(evaluate_rep)])
+            pd_data = pd.DataFrame(res, columns=columns_name)
+            pd_data.to_excel(writer, sheet_name=f'window_{j}', float_format='%.4f')
+        writer.close()

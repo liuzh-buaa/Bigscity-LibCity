@@ -26,6 +26,9 @@
   "use_early_stop": true,
   "patience": 50,
 
+  "loss_function": "masked_mae",
+  "clamp_function": "relu_0.0001",
+
   "sigma_pi": 1,
   "sigma_start": 0.01,
   "sigma_sigma_pi": 1,
@@ -36,7 +39,5 @@
   "init_params_from_dcrnn": false,
   "reg_encoder": true,
   "reg_decoder": true,
-  "reg_decoder_sigma_0": false,
-  "loss_function": "masked_mae",
-  "clamp_function": "relu_0.0001"
+  "reg_decoder_sigma_0": false
 }

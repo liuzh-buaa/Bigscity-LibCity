@@ -128,7 +128,7 @@ class BDCRNNExecutor(TrafficStateExecutor):
         batches_seen = num_batches * self._epoch_num
         for epoch_idx in range(self._epoch_num, self.epochs):
             start_time = time.time()
-            losses, batches_seen = self._train_epoch(train_dataloader, epoch_idx, batches_seen, self.loss_func)
+            losses, batches_seen = self._train_epoch(train_dataloader, epoch_idx, batches_seen, self.loss_func, num_batches)
             t1 = time.time()
             train_time.append(t1 - start_time)
             self._writer.add_scalar('training loss', np.mean(losses), batches_seen)
@@ -184,7 +184,7 @@ class BDCRNNExecutor(TrafficStateExecutor):
             self.load_model_with_epoch(best_epoch)
         return min_val_loss
 
-    def _train_epoch(self, train_dataloader, epoch_idx, batches_seen=None, loss_func=None):
+    def _train_epoch(self, train_dataloader, epoch_idx, batches_seen=None, loss_func=None, num_batches=1):
         """
         完成模型一个轮次的训练
 
@@ -205,7 +205,7 @@ class BDCRNNExecutor(TrafficStateExecutor):
         for batch in train_dataloader:
             self.optimizer.zero_grad()
             batch.to_tensor(self.device)
-            loss = loss_func(batch, batches_seen)
+            loss = loss_func(batch, batches_seen, num_batches)
             self._logger.debug(loss.item())
             losses.append(loss.item())
             batches_seen += 1
