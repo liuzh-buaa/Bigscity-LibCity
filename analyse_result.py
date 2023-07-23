@@ -54,6 +54,7 @@ if __name__ == '__main__':
     assert outputs.shape == sigmas.shape and output_dim == 1
     prediction, truth, outputs, sigmas = prediction[..., 0], truth[..., 0], outputs[..., 0], sigmas[..., 0]
     for i in range(10):
+        logger.info(f'Analyzing node {i}...')
         # (num_data, output_window), (evaluate_rep, num_data, output_window)
         prediction_node, truth_node, outputs_node, sigmas_node = prediction[:, :, i], truth[:, :, i], \
                                                                  outputs[:, :, :, i], sigmas[:, :, :, i]
