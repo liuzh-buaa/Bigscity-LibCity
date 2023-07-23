@@ -3,6 +3,7 @@ import os.path
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from libcity.config import ConfigParser
 from libcity.utils import get_logger, ensure_dir
@@ -30,8 +31,10 @@ if __name__ == '__main__':
 
     evaluate_cache_dir = './libcity/cache/{}/evaluate_cache'.format(exp_id)
     analyze_cache_dir = './libcity/cache/{}/analyze_cache'.format(exp_id)
+    images_cache_dir = '{}/images'.format(analyze_cache_dir)
     assert os.path.exists(evaluate_cache_dir)
     ensure_dir(analyze_cache_dir)
+    ensure_dir(images_cache_dir)
 
     visited = False
     for filename in os.listdir(evaluate_cache_dir):
@@ -72,4 +75,11 @@ if __name__ == '__main__':
             columns_name.extend(['sigma_{}'.format(i) for i in range(evaluate_rep)])
             pd_data = pd.DataFrame(res, columns=columns_name)
             pd_data.to_excel(writer, sheet_name=time, float_format='%.4f')
+            x = np.arange(num_data)
+            plt.plot(x, error, 'ro-', label='error')
+            plt.plot(x, a_uncertainty, 'bv-', label='a_uncertainty')
+            plt.plot(x, e_uncertainty, 'g^-', label='e_uncertainty')
+            plt.plot(x, uncertainty, 'ys-', label='uncertainty')
+            plt.legend()
+            plt.savefig(f'{images_cache_dir}/{dataset_name}_node_{i}_{time}.svg', bbox_inches='tight')
         writer.close()
