@@ -1,9 +1,9 @@
 import argparse
 import os.path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from libcity.config import ConfigParser
 from libcity.utils import get_logger, ensure_dir
@@ -11,6 +11,7 @@ from libcity.utils import get_logger, ensure_dir
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', type=str, default='traffic_state_pred')
+    parser.add_argument('--batch_size', type=int, default=256)
 
     parser.add_argument('--model', type=str, required=True)
     parser.add_argument('--exp_id', type=str, required=True)
@@ -76,11 +77,15 @@ if __name__ == '__main__':
             columns_name.extend(['sigma_{}'.format(i) for i in range(evaluate_rep)])
             pd_data = pd.DataFrame(res, columns=columns_name)
             pd_data.to_excel(writer, sheet_name=time, float_format='%.4f')
-            x = np.arange(num_data)
-            plt.plot(x, error, 'ro-', label='error')
-            plt.plot(x, a_uncertainty, 'bv-', label='a_uncertainty')
-            plt.plot(x, e_uncertainty, 'g^-', label='e_uncertainty')
-            plt.plot(x, uncertainty, 'ys-', label='uncertainty')
-            plt.legend()
-            plt.savefig(f'{images_cache_dir}/{dataset_name}_node_{i}_{time}.svg', bbox_inches='tight')
+            for k in range(0, num_data, args.batch_size):
+                t_num = min(args.batch_size, num_data - k)
+                x = np.arange(k, k + t_num)
+                plt.plot(x, error[k:k + t_num], 'ro-', label='error')
+                plt.plot(x, a_uncertainty[k:k + t_num], 'bv-', label='a_uncertainty')
+                plt.plot(x, e_uncertainty[k:k + t_num], 'g^-', label='e_uncertainty')
+                plt.plot(x, uncertainty[k:k + t_num], 'ys-', label='uncertainty')
+                plt.legend()
+                plt.savefig(f'{images_cache_dir}/{dataset_name}_node_{i}_batch_{k // args.batch_size}_{time}.svg',
+                            bbox_inches='tight')
+                plt.close()
         writer.close()
