@@ -3,7 +3,6 @@ import os.path
 
 import numpy as np
 import pandas as pd
-import torch
 
 from libcity.config import ConfigParser
 from libcity.utils import get_logger, ensure_dir
@@ -51,7 +50,7 @@ if __name__ == '__main__':
     evaluate_rep, num_data, output_window, num_nodes, output_dim = outputs.shape
     assert outputs.shape == sigmas.shape and output_dim == 1
     prediction, truth, outputs, sigmas = prediction[..., 0], truth[..., 0], outputs[..., 0], sigmas[..., 0]
-    for i in range(num_nodes):
+    for i in range(10):
         # (num_data, output_window), (evaluate_rep, num_data, output_window)
         prediction_node, truth_node, outputs_node, sigmas_node = prediction[:, :, i], truth[:, :, i], \
                                                                  outputs[:, :, :, i], sigmas[:, :, :, i]
@@ -59,7 +58,7 @@ if __name__ == '__main__':
         outputs_node_2 = outputs_node * outputs_node
         prediction_node_2 = prediction_node * prediction_node
         writer = pd.ExcelWriter(f'{analyze_cache_dir}/{dataset_name}_node_{i}.xlsx')
-        for j in range(output_window):
+        for j, time in zip([2, 5, 11], ['15min', '30min', '1h']):
             p, t, o, s = prediction_node[:, j], truth_node[:, j], outputs_node[:, :, j], sigmas_node[:, :, j]
             p2, s2, o2 = prediction_node_2[:, j], sigmas_node_2[:, :, j], outputs_node_2[:, :, j]
             error = p - t
@@ -72,5 +71,5 @@ if __name__ == '__main__':
             columns_name.extend(['output_{}'.format(i) for i in range(evaluate_rep)])
             columns_name.extend(['sigma_{}'.format(i) for i in range(evaluate_rep)])
             pd_data = pd.DataFrame(res, columns=columns_name)
-            pd_data.to_excel(writer, sheet_name=f'window_{j}', float_format='%.4f')
+            pd_data.to_excel(writer, sheet_name=time, float_format='%.4f')
         writer.close()
