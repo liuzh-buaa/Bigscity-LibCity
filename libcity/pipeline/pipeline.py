@@ -61,6 +61,12 @@ def run_model(task=None, model_name=None, dataset_name=None, config_file=None,
         executor.load_model(model_cache_file)
     # 评估，评估结果将会放在 cache/evaluate_cache 下
     executor.evaluate(test_data)
+    # free disk space
+    model_cache_dir = './libcity/cache/{}/model_cache/'.format(exp_id)
+    for filename in os.listdir(model_cache_dir):
+        if filename[-4:] == '.tar':
+            print('Deleting {}{}'.format(model_cache_dir, filename))
+            os.remove('{}{}'.format(model_cache_dir, filename))
 
 
 def parse_search_space(space_file):
