@@ -4,7 +4,7 @@ import shutil
 if __name__ == '__main__':
     cache_dir = './libcity/cache/'
     for exp_id in os.listdir(cache_dir):
-        if exp_id in ['dataset_cache', 'hyper_tune', '93092', '44957', '75994']:
+        if exp_id in ['dataset_cache', 'hyper_tune']:
             continue
         exp_cache_dir = cache_dir + exp_id + '/'
         evaluate_cache_dir = exp_cache_dir + 'evaluate_cache/'
