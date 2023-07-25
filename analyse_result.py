@@ -80,10 +80,11 @@ if __name__ == '__main__':
             for k in range(0, num_data, args.batch_size):
                 t_num = min(args.batch_size, num_data - k)
                 x = np.arange(k, k + t_num)
-                plt.plot(x, np.abs(error[k:k + t_num]), label='|error|')
-                plt.plot(x, a_uncertainty[k:k + t_num], label='a_uncertainty')
-                plt.plot(x, e_uncertainty[k:k + t_num], label='e_uncertainty')
-                plt.plot(x, uncertainty[k:k + t_num], label='uncertainty')
+                mask = np.where(t[k: k + t_num], 1, 0)
+                plt.plot(x, np.abs(error[k:k + t_num]) * mask, label='|error|')
+                plt.plot(x, a_uncertainty[k:k + t_num] * mask, label='a_uncertainty')
+                plt.plot(x, e_uncertainty[k:k + t_num] * mask, label='e_uncertainty')
+                plt.plot(x, uncertainty[k:k + t_num] * mask, label='uncertainty')
                 plt.legend()
                 plt.savefig(f'{images_cache_dir}/{dataset_name}_node_{i}_batch_{k // args.batch_size}_{time}.svg',
                             bbox_inches='tight')
