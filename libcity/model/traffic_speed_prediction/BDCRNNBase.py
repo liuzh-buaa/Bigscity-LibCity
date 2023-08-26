@@ -284,7 +284,7 @@ class DecoderSigmaModel(nn.Module, Seq2SeqAttrs):
 
 
 class BDCRNNBase(AbstractTrafficStateModel, Seq2SeqAttrs):
-    def __init__(self, config, data_feature):
+    def __init__(self, config, data_feature, variance=False):
         self.adj_mx = data_feature.get('adj_mx')
         self.num_nodes = data_feature.get('num_nodes', 1)
         self.feature_dim = data_feature.get('feature_dim', 1)
@@ -295,7 +295,7 @@ class BDCRNNBase(AbstractTrafficStateModel, Seq2SeqAttrs):
         super().__init__(config, data_feature)
         Seq2SeqAttrs.__init__(self, config, self.adj_mx)
         self.encoder_model = EncoderModel(config, self.adj_mx)
-        self.decoder_model = DecoderModel(config, self.adj_mx)
+        self.decoder_model = DecoderModel(config, self.adj_mx, variance)
 
         self.use_curriculum_learning = config.get('use_curriculum_learning', False)
         self.input_window = config.get('input_window', 1)

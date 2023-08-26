@@ -8,7 +8,7 @@ from libcity.model.traffic_speed_prediction.layers.functions import count_parame
 
 class BDCRNNVariableSharedLayer(BDCRNNBase):
     def __init__(self, config, data_feature):
-        super(BDCRNNVariableSharedLayer, self).__init__(config, data_feature)
+        super(BDCRNNVariableSharedLayer, self).__init__(config, data_feature, True)
 
     def encoder(self, inputs):
         """
