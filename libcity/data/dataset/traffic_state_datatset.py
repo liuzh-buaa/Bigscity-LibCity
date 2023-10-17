@@ -35,11 +35,12 @@ class TrafficStateDataset(AbstractDataset):
         self.add_day_in_week = self.config.get('add_day_in_week', False)
         self.input_window = self.config.get('input_window', 12)
         self.output_window = self.config.get('output_window', 12)
+        self.shuffle = self.config.get('shuffle', True)
         self.parameters_str = \
             str(self.dataset) + '_' + str(self.input_window) + '_' + str(self.output_window) + '_' \
             + str(self.train_rate) + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) + '_' \
             + str(self.batch_size) + '_' + str(self.load_external) + '_' + str(self.add_time_in_day) + '_' \
-            + str(self.add_day_in_week) + '_' + str(self.pad_with_last_sample)
+            + str(self.add_day_in_week) + '_' + str(self.pad_with_last_sample) + '_' + str(self.shuffle)
         self.cache_file_name = os.path.join('./libcity/cache/dataset_cache/',
                                             'traffic_state_{}.npz'.format(self.parameters_str))
         self.cache_file_folder = './libcity/cache/dataset_cache/'
@@ -968,7 +969,8 @@ class TrafficStateDataset(AbstractDataset):
         # 转Dataloader
         self.train_dataloader, self.eval_dataloader, self.test_dataloader = \
             generate_dataloader(train_data, eval_data, test_data, self.feature_name,
-                                self.batch_size, self.num_workers, pad_with_last_sample=self.pad_with_last_sample)
+                                self.batch_size, self.num_workers, shuffle=self.shuffle,
+                                pad_with_last_sample=self.pad_with_last_sample)
         self.num_batches = len(self.train_dataloader)
         return self.train_dataloader, self.eval_dataloader, self.test_dataloader
 
