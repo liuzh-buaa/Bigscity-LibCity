@@ -265,7 +265,7 @@ class BDCRNNConstant(AbstractTrafficStateModel, Seq2SeqAttrs):
         return self.forward(batch, batches_seen)
 
     def predict_sigma(self, batch, batches_seen=None):
-        return self.sigma_0
+        return torch.Tensor(self.sigma_0)
 
     def _get_kl_sum(self):
         kl_sum = 0
