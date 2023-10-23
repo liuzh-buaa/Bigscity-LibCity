@@ -6,22 +6,34 @@ import torch.nn.functional as F
 
 
 class RandLinear(nn.Module):
-    def __init__(self, in_features, out_features, bias=True, sigma_pi=1.0, sigma_start=1.0):
+    """
+        pi(weight) ~ N(0, sigma_pi^2)
+        p(weight) ~ N(mu_weight, exp(log_sigma_weight)^2)
+        Sometimes, bias needn't be a gaussian random, then set random_bias=False;
+        Sometimes, we needn't calculate kl of bias, then set kl_bias=False;
+        Examples::
+        >>> nn.Linear(20, 30)
+    """
+
+    def __init__(self, in_features: int, out_features: int, bias: bool = True,
+                 random_bias: bool = True, kl_bias: bool = True, sigma_pi: float = 1.0, sigma_start: float = 1.0):
         super(RandLinear, self).__init__()
-
-        self._sigma_pi = sigma_pi
-
         self.in_features = in_features
         self.out_features = out_features
+        self.sigma_pi = sigma_pi
+        self.random_bias = bias and random_bias
+        self.kl_bias = self.random_bias and kl_bias
         self.mu_weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
         self.log_sigma_weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
         self.register_buffer('buffer_eps_weight', torch.Tensor(out_features, in_features))
         if bias:
             self.mu_bias = torch.nn.Parameter(torch.Tensor(out_features))
+        else:
+            self.register_parameter('mu_bias', None)
+        if self.random_bias:
             self.log_sigma_bias = torch.nn.Parameter(torch.Tensor(out_features))
             self.register_buffer('buffer_eps_bias', torch.Tensor(out_features))
         else:
-            self.register_parameter('mu_bias', None)
             self.register_parameter('log_sigma_bias', None)
             self.register_buffer('buffer_eps_bias', None)
 
@@ -47,8 +59,9 @@ class RandLinear(nn.Module):
             fan_in, _ = _calculate_fan_in_and_fan_out(self.mu_weight)
             bound = 1 / math.sqrt(fan_in)
             torch.nn.init.uniform_(self.mu_bias, -bound, bound)
-            torch.nn.init.constant_(self.log_sigma_bias, math.log(sigma_start))
-            torch.nn.init.constant_(self.buffer_eps_bias, 0)
+            if self.random_bias:
+                torch.nn.init.constant_(self.log_sigma_bias, math.log(sigma_start))
+                torch.nn.init.constant_(self.buffer_eps_bias, 0)
 
         self.shared_eps = False
 
@@ -59,21 +72,24 @@ class RandLinear(nn.Module):
         else:
             weight = self.mu_weight + sigma_weight * torch.randn(self.mu_weight.shape, device=self.mu_weight.device)
         if self.mu_bias is not None:
-            sigma_bias = torch.exp(self.log_sigma_bias)
-            if self.shared_eps:
-                bias = self.mu_bias + sigma_bias * self.buffer_eps_bias
+            if self.random_bias:
+                sigma_bias = torch.exp(self.log_sigma_bias)
+                if self.shared_eps:
+                    bias = self.mu_bias + sigma_bias * self.buffer_eps_bias
+                else:
+                    bias = self.mu_bias + sigma_bias * torch.randn(self.mu_bias.shape, device=self.mu_bias.device)
             else:
-                bias = self.mu_bias + sigma_bias * torch.randn(self.mu_bias.shape, device=self.mu_bias.device)
+                bias = self.mu_bias
         else:
             bias = None
         return F.linear(input, weight, bias)
 
     def get_kl_sum(self):
-        kl_weight = - self.log_sigma_weight + 0.5 * (  # +math.log(self._sigma_pi)
-                torch.exp(self.log_sigma_weight) ** 2 + self.mu_weight ** 2) / (self._sigma_pi ** 2)
-        if self.mu_bias is not None:
-            kl_bias = - self.log_sigma_bias + 0.5 * (  # +math.log(self._sigma_pi)
-                    torch.exp(self.log_sigma_bias) ** 2 + self.mu_bias ** 2) / (self._sigma_pi ** 2)
+        kl_weight = - self.log_sigma_weight + 0.5 * (  # +math.log(self.sigma_pi)
+                torch.exp(self.log_sigma_weight) ** 2 + self.mu_weight ** 2) / (self.sigma_pi ** 2)
+        if self.kl_bias:
+            kl_bias = - self.log_sigma_bias + 0.5 * (  # +math.log(self.sigma_pi)
+                    torch.exp(self.log_sigma_bias) ** 2 + self.mu_bias ** 2) / (self.sigma_pi ** 2)
         else:
             kl_bias = 0
 
@@ -82,7 +98,13 @@ class RandLinear(nn.Module):
     def set_shared_eps(self):
         self.shared_eps = True
         torch.nn.init.normal_(self.buffer_eps_weight)
-        torch.nn.init.normal_(self.buffer_eps_bias)
+        if self.buffer_eps_bias is not None:
+            torch.nn.init.normal_(self.buffer_eps_bias)
 
     def clear_shared_eps(self):
         self.shared_eps = False
+
+    def extra_repr(self) -> str:
+        return 'in_features={}, out_features={}, bias={}, random_bias={}, kl_bias={}, sigma_pi={}'.format(
+            self.in_features, self.out_features, self.bias is not None, self.random_bias, self.kl_bias, self.sigma_pi
+        )

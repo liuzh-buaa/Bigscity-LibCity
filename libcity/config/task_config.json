@@ -449,11 +449,17 @@
     },
     "eta": {
         "allowed_model": [
-            "DeepTTE", "TTPNet"
+            "DeepTTE", "TTPNet", "DeepTTEConstantShared"
         ],
         "allowed_dataset": [
             "Chengdu_Taxi_Sample1", "Beijing_Taxi_Sample"
         ],
+        "DeepTTEConstantShared": {
+            "dataset_class": "ETADataset",
+            "executor": "DeepTTEBayesExecutor",
+            "evaluator": "ETAEvaluator",
+            "eta_encoder": "DeeptteEncoder"
+        },
         "DeepTTE": {
             "dataset_class": "ETADataset",
             "executor": "ETAExecutor",

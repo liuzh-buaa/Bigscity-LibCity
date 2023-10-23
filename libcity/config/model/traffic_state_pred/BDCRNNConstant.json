@@ -32,7 +32,5 @@
   "loss_function": "masked_mae",
   "sigma_0": 0.0001,
 
-  "evaluate_rep": 30,
-
   "init_params_from_dcrnn": false
 }
