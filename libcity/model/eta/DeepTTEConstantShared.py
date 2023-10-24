@@ -45,6 +45,7 @@ class DeepTTEConstantShared(AbstractTrafficStateModel):
         sigma_pi = config.get('sigma_pi')
         sigma_start = config.get('sigma_start')
         self.sigma_0 = config.get('sigma_0')
+        self.loss_function = config.get('loss_function')
 
         # spatio-temporal component
         self.spatio_temporal = RandSpatioTemporal(
@@ -105,29 +106,35 @@ class DeepTTEConstantShared(AbstractTrafficStateModel):
             return entire_out
 
     def calculate_loss(self, batch):
-        if self.training:
-            entire_out, (local_out, local_length) = self.predict(batch)
-        else:
-            entire_out = self.predict(batch)
+        assert self.training, 'Call calculate_loss func incorrectly.'
+        entire_out, (local_out, local_length) = self.predict(batch)
 
         time_mean, time_std = self.data_feature["time_mean"], self.data_feature["time_std"]
         entire_out = normalize(entire_out, time_mean, time_std)
         time = normalize(batch["time"], time_mean, time_std)
+        entire_loss = self.entire_estimate.eval_on_batch(entire_out, time, time_mean, time_std, mode=self.loss_function,
+                                                         sigma_0=self.sigma_0, reg=self.entire_estimate.get_kl_sum())
+
+        # get the mean/std of each local path
+        time_gap_mean, time_gap_std = self.data_feature["time_gap_mean"], self.data_feature["time_gap_std"]
+        mean, std = (self.kernel_size - 1) * time_gap_mean, (self.kernel_size - 1) * time_gap_std
+        current_tim = normalize(batch["current_tim"], time_gap_mean, time_gap_std)
+
+        # get ground truth of each local path
+        local_label = get_local_seq(current_tim, self.kernel_size, mean, std, self.device)
+        local_loss = self.local_estimate.eval_on_batch(local_out, local_length, local_label, mean, std,
+                                                       mode=self.loss_function,
+                                                       sigma_0=self.sigma_0, reg=self.local_estimate.get_kl_sum())
+
+        return (1 - self.alpha) * entire_loss + self.alpha * local_loss
+
+    def calculate_eval_loss(self, batch):
+        entire_out = self.predict(batch)
+        time_mean, time_std = self.data_feature["time_mean"], self.data_feature["time_std"]
+        entire_out = normalize(entire_out, time_mean, time_std)
+        time = normalize(batch["time"], time_mean, time_std)
         entire_loss = self.entire_estimate.eval_on_batch(entire_out, time, time_mean, time_std)
-
-        if self.training:
-            # get the mean/std of each local path
-            time_gap_mean, time_gap_std = self.data_feature["time_gap_mean"], self.data_feature["time_gap_std"]
-            mean, std = (self.kernel_size - 1) * time_gap_mean, (self.kernel_size - 1) * time_gap_std
-            current_tim = normalize(batch["current_tim"], time_gap_mean, time_gap_std)
-
-            # get ground truth of each local path
-            local_label = get_local_seq(current_tim, self.kernel_size, mean, std, self.device)
-            local_loss = self.local_estimate.eval_on_batch(local_out, local_length, local_label, mean, std)
-
-            return (1 - self.alpha) * entire_loss + self.alpha * local_loss
-        else:
-            return entire_loss
+        return entire_loss
 
     def predict(self, batch):
         time_mean, time_std = self.data_feature["time_mean"], self.data_feature["time_std"]

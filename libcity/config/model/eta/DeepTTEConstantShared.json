@@ -26,6 +26,7 @@
   "sigma_start": 0.01,
 
   "sigma_0": 0.0001,
+  "loss_function": "masked_mae",
 
   "evaluate_rep": 30
 }

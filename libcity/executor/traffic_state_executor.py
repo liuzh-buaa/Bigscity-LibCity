@@ -393,7 +393,7 @@ class TrafficStateExecutor(AbstractExecutor):
         """
         with torch.no_grad():
             self.model.eval()
-            loss_func = loss_func if loss_func is not None else self.model.calculate_loss
+            loss_func = loss_func if loss_func is not None else self.model.calculate_eval_loss
             losses = []
             for batch in eval_dataloader:
                 batch.to_tensor(self.device)

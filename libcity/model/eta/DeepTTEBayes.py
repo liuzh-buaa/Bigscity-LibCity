@@ -287,13 +287,20 @@ class RandEntireEstimator(nn.Module):
 
         return out
 
-    def eval_on_batch(self, pred, label, mean, std):
+    def eval_on_batch(self, pred, label, mean, std, mode='masked_mape', **kwargs):
         label = label
 
         label = label * std + mean
         pred = pred * std + mean
 
-        return loss.masked_mape_torch(pred, label)
+        if mode == 'masked_mape':
+            return loss.masked_mape_torch(pred, label)
+        elif mode == 'masked_mae':
+            return loss.masked_mae_const_reg_torch(pred, label, **kwargs)
+        elif mode == 'masked_mse':
+            return loss.masked_mse_const_reg_torch(pred, label, **kwargs)
+        else:
+            raise NotImplementedError('No such loss function for eval_on_batch in EntireEstimator.')
 
     def set_shared_eps(self):
         self.input2hid.set_shared_eps()
@@ -337,14 +344,21 @@ class RandLocalEstimator(nn.Module):
 
         return out
 
-    def eval_on_batch(self, pred, lens, label, mean, std):
+    def eval_on_batch(self, pred, lens, label, mean, std, mode='masked_mape', **kwargs):
         label = nn.utils.rnn.pack_padded_sequence(label, lens, batch_first=True)[0]
         label = label
 
         label = label * std + mean
         pred = pred * std + mean
 
-        return loss.masked_mape_torch(pred, label, eps=self.eps)
+        if mode == 'masked_mape':
+            return loss.masked_mape_torch(pred, label, eps=self.eps)
+        elif mode == 'masked_mae':
+            return loss.masked_mae_const_reg_torch(pred, label, **kwargs)
+        elif mode == 'masked_mse':
+            return loss.masked_mse_const_reg_torch(pred, label, **kwargs)
+        else:
+            raise NotImplementedError('No such loss function for eval_on_batch in EntireEstimator.')
 
     def set_shared_eps(self):
         self.input2hid.set_shared_eps()
