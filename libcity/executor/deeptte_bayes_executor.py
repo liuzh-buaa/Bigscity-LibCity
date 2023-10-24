@@ -83,8 +83,8 @@ class DeepTTEBayesExecutor(TrafficStateExecutor):
                 batch.to_tensor(self.device)
                 # output = self.model.predict(batch)
                 output = torch.stack([self.model.predict(batch).detach().clone() for _ in range(self.evaluate_rep)])
+                y_pred = torch.mean(output, dim=0)
                 y_true = batch['time']
-                y_pred = output
                 y_truths.append(y_true.cpu().numpy())
                 y_preds.append(y_pred.cpu().numpy())
                 if self.output_pred:
