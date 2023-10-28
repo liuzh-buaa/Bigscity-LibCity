@@ -6,7 +6,7 @@
 
 # LibCity（阡陌）
 
-[HomePage](https://libcity.ai/)|[Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/index.html)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper)|[中文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme_zh.md)
+[HomePage](https://libcity.ai/) | [Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/index.html) | [Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets) | [Conference Paper](https://dl.acm.org/doi/10.1145/3474717.3483923) | [Full Paper](https://arxiv.org/abs/2304.14343) | [Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper) | [Experiment Tool](https://github.com/LibCity/Bigscity-LibCity-WebTool) | [EA&B Track Paper](https://arxiv.org/abs/2308.12899) | [中文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme_zh.md) 
 
 LibCity is a unified, comprehensive, and extensible library, which provides researchers with a credible experimental tool and a convenient development framework in the traffic prediction field. Our library is implemented based on PyTorch and includes all the necessary steps or components related to traffic prediction into a systematic pipeline, allowing researchers to conduct comprehensive experiments. Our library will contribute to the standardization and reproducibility in the field of traffic prediction.
 
@@ -32,6 +32,14 @@ LibCity currently supports the following tasks:
 * **Extensible**: LibCity enables a modular design of different components, allowing users to flexibly insert customized components into the library. Therefore, new researchers can easily develop new models with the support of LibCity.
 
 ## LibCity News
+
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif)**08/24/2023:** We published a paper titled *Unified Data Management and Comprehensive Performance Evaluation for Urban Spatial-Temporal Prediction [Experiment, Analysis & Benchmark]*, including (1) a Unified Storage Format for urban spatial-temporal data, (2) a Technical Development Roadmap for urban spatial-temporal prediction models, (3) Extensive Experiments and Performance Evaluation using 18 models and 20 datasets. [[Paper]](https://arxiv.org/abs/2308.12899).
+
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif)**06/20/2023:** We released the Beijing trajectory dataset collected in November 2015, including 1018312 trajectories. We obtained the corresponding road network data from OpenStreetMap and preprocessed the trajectory data to get the Beijing trajectory dataset matched to the road network, and we believed that this dataset could promote the development of urban trajectory mining tasks. Please refer to this [link](https://github.com/aptx1231/START) to obtain it and ensure that this data is **used for research purposes only**. 
+
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **06/04/2023**: LibCity won the second prize in the 3rd China Science Open Source Software Creativity Competition! [Weixin](https://mp.weixin.qq.com/s?__biz=MzA3NzM4OTc4Mw==&mid=2454775999&idx=1&sn=881a31468c5cd472ed72967b487837cf&chksm=88f68207bf810b1157ac622ae0beba0a1f2ca8ece38fa5c743c4e082c30d9e27d23b92b61530&scene=126&sessionid=1687198811#rd)
+
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/27/2023:** We published a [full paper](https://arxiv.org/abs/2304.14343) titled *LibCity: A Unified Library Towards Efficient and Comprehensive Urban Spatial-Temporal Prediction*, which provides more details of LibCity. [[Paper\]](https://arxiv.org/abs/2304.14343).
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/19/2022**: Our self-attention-based traffic flow prediction model **PDFormer** developed on LibCity was accepted by **AAAI2023**, please check this [link](https://github.com/BUAABIGSCity/PDFormer) for more details.
 
@@ -140,7 +148,7 @@ If you encounter a bug or have any suggestion, please contact us by [raising an 
 Our paper is accepted by ACM SIGSPATIAL 2021. If you find LibCity useful for your research or development, please cite our [paper](https://dl.acm.org/doi/10.1145/3474717.3483923).
 
 ```
-@inproceedings{10.1145/3474717.3483923,
+@inproceedings{libcity,
   author = {Wang, Jingyuan and Jiang, Jiawei and Jiang, Wenjun and Li, Chao and Zhao, Wayne Xin},
   title = {LibCity: An Open Library for Traffic Prediction},
   year = {2021},
@@ -158,8 +166,15 @@ Our paper is accepted by ACM SIGSPATIAL 2021. If you find LibCity useful for you
 }
 ```
 
+For the long paper, please cite it as follows:
+
 ```
-Jingyuan Wang, Jiawei Jiang, Wenjun Jiang, Chao Li, and Wayne Xin Zhao. 2021. LibCity: An Open Library for Traffic Prediction. In Proceedings of the 29th International Conference on Advances in Geographic Information Systems (SIGSPATIAL '21). Association for Computing Machinery, New York, NY, USA, 145–148. DOI:https://doi.org/10.1145/3474717.3483923
+@article{libcitylong,
+  title={Towards Efficient and Comprehensive Urban Spatial-Temporal Prediction: A Unified Library and Performance Benchmark}, 
+  author={Jingyuan Wang and Jiawei Jiang and Wenjun Jiang and Chengkai Han and Wayne Xin Zhao},
+  journal={arXiv preprint arXiv:2304.14343},
+  year={2023}
+}
 ```
 
 ## License
