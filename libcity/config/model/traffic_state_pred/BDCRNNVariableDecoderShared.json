@@ -37,5 +37,5 @@
   "init_params_from_dcrnn": false,
   "reg_encoder": true,
   "reg_decoder": true,
-  "reg_decoder_sigma_0": false
+  "reg_decoder_sigma_0": true
 }

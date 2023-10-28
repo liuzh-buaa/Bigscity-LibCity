@@ -34,6 +34,9 @@ def run_model(task=None, model_name=None, dataset_name=None, config_file=None,
         # Make a new experiment ID
         exp_id = int(random.SystemRandom().random() * 100000)
         config['exp_id'] = exp_id
+    model_cached_id = config.get('model_cache_id', None)
+    if model_cached_id is None:
+        model_cached_id = exp_id
     # logger
     logger = get_logger(config)
     logger.info('Begin pipeline, task={}, model_name={}, dataset_name={}, exp_id={}'.
@@ -49,11 +52,13 @@ def run_model(task=None, model_name=None, dataset_name=None, config_file=None,
     data_feature = dataset.get_data_feature()
     # 加载执行器
     model_cache_file = './libcity/cache/{}/model_cache/{}_{}.m'.format(
-        exp_id, model_name, dataset_name)
+        model_cached_id, model_name, dataset_name)
     model = get_model(config, data_feature)
     executor = get_executor(config, model, data_feature)
     # 训练
     if train or not os.path.exists(model_cache_file):
+        if os.path.exists(model_cache_file):
+            executor.load_model(model_cache_file)
         executor.train(train_data, valid_data)
         if saved_model:
             executor.save_model(model_cache_file)

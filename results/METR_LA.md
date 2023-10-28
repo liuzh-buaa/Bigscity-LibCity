@@ -126,3 +126,4 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 9488-DCRNN-METR_LA-Oct-14-2023_04-02-24.log shuffle=True (close)
 98946-DCRNN-METR_LA-Oct-16-2023_08-33-51.log shuffle=False (worse)
 79081-BDCRNNVariableDecoder-METR_LA-Oct-21-2023_14-52-43.log shuffle=False (不收敛)
+26233-BDCRNNVariableDecoder-METR_LA-Oct-28-2023_12-32-24.log shuffle=False 从75994加载参数（不收敛）
