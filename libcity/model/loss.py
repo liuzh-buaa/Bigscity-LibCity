@@ -5,6 +5,15 @@ import torch
 from sklearn.metrics import r2_score, explained_variance_score
 
 
+def consistent_loss(sigma_0):
+    ret = 0
+    for batch_sigma_0 in torch.unbind(sigma_0, 2):  # (batch_size, output_window, num_nodes, output_dim)
+        sequence_sigma_0 = torch.unbind(batch_sigma_0, 0)
+        for i in range(len(sequence_sigma_0) - 1):
+            ret += torch.abs(torch.sum(sequence_sigma_0[i][1:] - sequence_sigma_0[i + 1][:-1]))
+    return ret
+
+
 def masked_mae_loss(y_pred, y_true):
     mask = (y_true != 0).float()
     mask /= mask.mean()
@@ -55,7 +64,7 @@ def masked_mae_const_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
     return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 
 
-def masked_mae_relu_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_relu_eps=0.0):
+def masked_mae_relu_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_relu_eps=0.0, switch_consistent=False):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -87,21 +96,27 @@ def masked_mae_relu_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, cust
             return grad_input
 
     sigma_0 = MyReLU.apply(sigma_0)
+    sigma_0 = sigma_0 * mask
+    sigma_0 = torch.where(mask == 0, torch.ones_like(sigma_0), sigma_0)
+
     log_sigma_0 = torch.log(sigma_0)
 
     loss = torch.abs(torch.sub(preds, labels)) / sigma_0
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
 
-    log_sigma_0 = log_sigma_0 * mask
-    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
+    # log_sigma_0 = log_sigma_0 * mask
+    # log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
 
     valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    if switch_consistent:
+        return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size + consistent_loss(sigma_0)
 
     return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 
 
-def masked_mae_softplus_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_softplus_beta=1):
+def masked_mae_softplus_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_softplus_beta=1, switch_consistent=False):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -112,21 +127,27 @@ def masked_mae_softplus_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, 
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
 
     sigma_0 = torch.nn.Softplus(beta=custom_softplus_beta)(sigma_0)
+    sigma_0 = sigma_0 * mask
+    sigma_0 = torch.where(mask == 0, torch.ones_like(sigma_0), sigma_0)
+
     log_sigma_0 = torch.log(sigma_0)
 
     loss = torch.abs(torch.sub(preds, labels)) / sigma_0
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
 
-    log_sigma_0 = log_sigma_0 * mask
-    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
+    # log_sigma_0 = log_sigma_0 * mask
+    # log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
 
     valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    if switch_consistent:
+        return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size + consistent_loss(sigma_0)
 
     return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 
 
-def masked_mae_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
+def masked_mae_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan, switch_consistent=False):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -135,6 +156,9 @@ def masked_mae_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
     mask = mask.float()
     mask /= torch.mean(mask)
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
+
+    log_sigma_0 = log_sigma_0 * mask
+    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
 
     if type(log_sigma_0) == torch.Tensor:
         sigma_0 = torch.exp(log_sigma_0)
@@ -145,10 +169,10 @@ def masked_mae_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
 
-    log_sigma_0 = log_sigma_0 * mask
-    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
-
     valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    if switch_consistent:
+        return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size + consistent_loss(sigma_0)
 
     return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 
@@ -207,6 +231,7 @@ def masked_mse_torch(preds, labels, null_val=np.nan):
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
     return torch.mean(loss)
 
+
 def masked_mse_const_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
@@ -231,7 +256,7 @@ def masked_mse_const_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan):
     return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 
 
-def masked_mse_relu_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_relu_eps=0.0):
+def masked_mse_relu_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_relu_eps=0.0, switch_consistent=False):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -263,21 +288,27 @@ def masked_mse_relu_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, cust
             return grad_input
 
     sigma_0 = MyReLU.apply(sigma_0)
+    sigma_0 = sigma_0 * mask
+    sigma_0 = torch.where(mask == 0, torch.ones_like(sigma_0), sigma_0)
+
     log_sigma_0 = torch.log(sigma_0)
 
     loss = torch.square(torch.sub(preds, labels)) / 2 / torch.mul(sigma_0, sigma_0)
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
 
-    log_sigma_0 = log_sigma_0 * mask
-    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
+    # log_sigma_0 = log_sigma_0 * mask
+    # log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
 
     valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    if switch_consistent:
+        return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size + consistent_loss(sigma_0)
 
     return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 
 
-def masked_mse_softplus_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_softplus_beta=1):
+def masked_mse_softplus_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, custom_softplus_beta=1, switch_consistent=False):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -288,21 +319,27 @@ def masked_mse_softplus_reg_torch(preds, labels, sigma_0, reg, null_val=np.nan, 
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
 
     sigma_0 = torch.nn.Softplus(custom_softplus_beta)(sigma_0)
+    sigma_0 = sigma_0 * mask
+    sigma_0 = torch.where(mask == 0, torch.ones_like(sigma_0), sigma_0)
+
     log_sigma_0 = torch.log(sigma_0)
 
     loss = torch.square(torch.sub(preds, labels)) / 2 / torch.mul(sigma_0, sigma_0)
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
 
-    log_sigma_0 = log_sigma_0 * mask
-    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
+    # log_sigma_0 = log_sigma_0 * mask
+    # log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
 
     valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    if switch_consistent:
+        return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size + consistent_loss(sigma_0)
 
     return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 
 
-def masked_mse_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
+def masked_mse_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan, switch_consistent=False):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -311,6 +348,9 @@ def masked_mse_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
     mask = mask.float()
     mask /= torch.mean(mask)
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
+
+    log_sigma_0 = log_sigma_0 * mask
+    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
 
     if type(log_sigma_0) == torch.Tensor:
         sigma_0 = torch.exp(log_sigma_0)
@@ -321,10 +361,10 @@ def masked_mse_log_reg_torch(preds, labels, log_sigma_0, reg, null_val=np.nan):
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
 
-    log_sigma_0 = log_sigma_0 * mask
-    log_sigma_0 = torch.where(mask == 0, torch.zeros_like(log_sigma_0), log_sigma_0)
-
     valid_size = torch.sum(torch.where(mask == 0, torch.zeros_like(labels), torch.ones_like(labels)))
+
+    if switch_consistent:
+        return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size + consistent_loss(sigma_0)
 
     return torch.mean(loss) + torch.mean(log_sigma_0) + reg / valid_size
 

@@ -158,13 +158,13 @@ class BDCRNNVariable(BDCRNNBase):
         sigma_0 = self.forward_sigma(batch, batches_seen)
         ll = self.clamp_function.split('_')
         if self.loss_function == 'masked_mae' and ll[0] == 'relu':
-            return loss.masked_mae_relu_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, float(ll[1]))
+            return loss.masked_mae_relu_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, float(ll[1]), switch_consistent=self.switch_consistent)
         elif self.loss_function == 'masked_mae' and ll[0] == 'Softplus':
-            return loss.masked_mae_softplus_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, int(ll[1]))
+            return loss.masked_mae_softplus_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, int(ll[1]), switch_consistent=self.switch_consistent)
         elif self.loss_function == 'masked_mse' and ll[0] == 'relu':
-            return loss.masked_mse_relu_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, float(ll[1]))
+            return loss.masked_mse_relu_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, float(ll[1]), switch_consistent=self.switch_consistent)
         elif self.loss_function == 'masked_mse' and ll[0] == 'Softplus':
-            return loss.masked_mse_softplus_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, int(ll[1]))
+            return loss.masked_mse_softplus_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0, int(ll[1]), switch_consistent=self.switch_consistent)
         else:
             raise NotImplementedError('Unrecognized loss function.')
 

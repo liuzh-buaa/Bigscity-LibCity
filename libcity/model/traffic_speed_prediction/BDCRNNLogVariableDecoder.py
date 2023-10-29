@@ -127,9 +127,9 @@ class BDCRNNLogVariableDecoder(BDCRNNBase):
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         if self.loss_function == 'masked_mae':
-            return loss.masked_mae_log_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum() / num_batches, 0)
+            return loss.masked_mae_log_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum() / num_batches, 0, switch_consistent=self.switch_consistent)
         elif self.loss_function == 'masked_mse':
-            return loss.masked_mse_log_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum() / num_batches, 0)
+            return loss.masked_mse_log_reg_torch(y_predicted, y_true, log_sigma_0, self._get_kl_sum() / num_batches, 0, switch_consistent=self.switch_consistent)
         else:
             raise NotImplementedError('Unrecognized loss function.')
 

@@ -33,6 +33,7 @@ class Seq2SeqAttrs:
         self.reg_decoder_sigma_0 = config.get('reg_decoder_sigma_0', False)
         self.loss_function = config.get('loss_function')
         self.clamp_function = config.get('clamp_function', 'null')
+        self.switch_consistent = config.get('switch_consistent', False)
 
 
 class EncoderModel(nn.Module, Seq2SeqAttrs):
