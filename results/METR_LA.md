@@ -130,3 +130,27 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 44854-BDCRNNVariableDecoderShared-METR_LA-Oct-28-2023_12-56-35.log reg_decoder_sigma_0=False shuffle=False (不收敛)
 58823-BDCRNNVariableDecoderShared-METR_LA-Oct-28-2023_12-57-39.log reg_decoder_sigma_0=True shuffle=False (不收敛)
 20183-BDCRNNVariableDecoder-METR_LA-Oct-29-2023_08-29-07.log consistent_loss but no abs （不收敛）
+46820-BDCRNNConstant-METR_LA-Oct-29-2023_08-04-17.log shuffle=False worst
+---------------------------------------------------------------------------------------------------------------------
+87635-DCRNN-METR_LA-Oct-29-2023_15-11-18.log shuffle=False (6.56)
+30260-DCRNN-METR_LA-Oct-29-2023_15-12-17.log shuffle=True (5.27)
+58466-DCRNN-METR_LA-Oct-30-2023_03-56-18.log shuffle=False max_norm=1 (5.98)
+18303-DCRNN-METR_LA-Oct-30-2023_03-58-08.log shuffle=False learning_rate=0.005 (5.42)
+34773-DCRNN-METR_LA-Oct-30-2023_14-32-19.log shuffle=False learning_rate=0.001 (5.76)
+28632-DCRNN-METR_LA-Oct-30-2023_14-33-20.log shuffle=False learning_rate=0.005 max_norm=1 (5.40)
+35510-DCRNN-METR_LA-Oct-31-2023_02-58-18.log shuffle=False learning_rate=0.005 lr_decay_ratio=0.5 (5.30)
+
+52984-BDCRNNVariableDecoderShared-METR_LA-Oct-29-2023_15-15-52.log shuffle=True sigma_pi=sigma_sigma_pi=1, sigma_start=sigma_sigma_start=0.01 (5.44)
+56441-BDCRNNVariableDecoderShared-METR_LA-Oct-29-2023_15-17-09.log shuffle=True sigma_pi=sigma_sigma_pi=sigma_start=sigma_sigma_start=1 (30.23)
+46635-BDCRNNVariableDecoderShared-METR_LA-Oct-30-2023_14-35-41.log shuffle=True sigma_pi=sigma_sigma_pi=0.1, sigma_start=sigma_sigma_start=0.01 (5.39)
+66101-BDCRNNVariableDecoderShared-METR_LA-Oct-30-2023_14-36-51.log shuffle=True sigma_pi=sigma_sigma_pi=1, sigma_start=sigma_sigma_start=0.01 learning_rate=0.005 (5.48)
+12243-BDCRNNVariableDecoderShared-METR_LA-Oct-31-2023_13-55-04.log shuffle=True sigma_pi=sigma_sigma_pi=1, sigma_start=sigma_sigma_start=0.01 max_norm=1 (5.57)
+17280-BDCRNNVariableDecoderShared-METR_LA-Nov-01-2023_02-42-30.log shuffle=True sigma_pi=sigma_sigma_pi=1, sigma_start=sigma_sigma_start=0.01 learning_rate=0.005 lr_decay_ratio=0.5 (5.31) 
+
+41105-BDCRNNVariableDecoder-METR_LA-Oct-31-2023_08-06-59.log shuffle=True sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 (5.34)
+18135-BDCRNNVariableDecoder-METR_LA-Oct-31-2023_08-08-06.log shuffle=True sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 learning_rate=0.005 (5.46)
+97341-BDCRNNVariableDecoder-METR_LA-Oct-31-2023_13-56-05.log shuffle=True sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 max_norm=1 (5.36)
+51791-BDCRNNVariableDecoder-METR_LA-Nov-01-2023_07-01-08.log shuffle=True sigma_pi=sigma_sigma_pi=0.1 sigma_start=sigma_sigma_start=0.01 (5.35)
+77290-BDCRNNVariableDecoder-METR_LA-Nov-01-2023_14-28-56.log shuffle=True sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 learning_rate=0.005 lr_decay_ratio=0.5 (5.27)
+38397-BDCRNNVariableDecoder-METR_LA-Nov-01-2023_14-31-22.log shuffle=False sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 learning_rate=0.005 lr_decay_ratio=0.5 (failed)
+
