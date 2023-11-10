@@ -50,5 +50,7 @@ python run_model.py --task traffic_state_pred --dataset PEMS_BAY --model DCRNN -
 95500-DCRNN-PEMS_BAY-Nov-02-2023_15-30-19.log shuffle=True (2.78)
 
 42704-BDCRNNVariableDecoder-PEMS_BAY-Nov-02-2023_15-36-35.log shuffle=True, sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 lr=0.005 lr_decay_ratio=0.5 (2.81)
+78783-BDCRNNVariableDecoder-PEMS_BAY-Nov-10-2023_06-14-22.log shuffle=True, sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 lr=0.005 lr_decay_ratio=0.5 max_norm=1
 
-9422-BDCRNNVariableDecoderShared-PEMS_BAY-Nov-08-2023_11-10-14.log shuffle=True, sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 lr=0.005 lr_decay_ratio=0.5
+9422-BDCRNNVariableDecoderShared-PEMS_BAY-Nov-08-2023_11-10-14.log shuffle=True, sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 lr=0.005 lr_decay_ratio=0.5 (2.80)
+42464-BDCRNNVariableDecoderShared-PEMS_BAY-Nov-10-2023_06-16-10.log shuffle=True, sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 lr=0.005 lr_decay_ratio=0.5 max_norm=1
