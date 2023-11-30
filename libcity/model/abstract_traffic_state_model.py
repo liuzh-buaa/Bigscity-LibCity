@@ -28,3 +28,6 @@ class AbstractTrafficStateModel(AbstractModel):
         Returns:
             torch.tensor: return training loss
         """
+
+    def calculate_eval_loss(self, batch):
+        return self.calculate_loss(batch)
