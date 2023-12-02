@@ -176,14 +176,14 @@ class DCRNNDropout(AbstractTrafficStateModel, Seq2SeqAttrs):
         outputs = sigma_0 = None
         if switch_outputs:
             # encoder_hidden_state1 = nn.Dropout(self.mu_dropout)(encoder_hidden_state)
-            encoder_hidden_state1 = F.dropout(input, self.p, True)
+            encoder_hidden_state1 = F.dropout(encoder_hidden_state, self.mu_dropout, True)
             outputs = self.decoder1(encoder_hidden_state1, labels, batches_seen=batches_seen)
             # (self.output_window, batch_size, self.num_nodes * self.output_dim)
             outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
             self._logger.debug("Decoder outputs complete")
         if switch_sigma_0:
             # encoder_hidden_state2 = nn.Dropout(self.sigma_dropout)(encoder_hidden_state)
-            encoder_hidden_state2 = F.dropout(input, self.p, True)
+            encoder_hidden_state2 = F.dropout(encoder_hidden_state, self.sigma_dropout, True)
             sigma_0 = self.decoder2(encoder_hidden_state2, labels, batches_seen=batches_seen)
             # (self.output_window, batch_size, self.num_nodes * self.output_dim)
             sigma_0 = sigma_0.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
