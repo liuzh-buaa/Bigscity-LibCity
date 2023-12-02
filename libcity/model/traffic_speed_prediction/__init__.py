@@ -23,6 +23,7 @@ from libcity.model.traffic_speed_prediction.BDCRNNLogVariableDecoderShared impor
 from libcity.model.traffic_speed_prediction.STGCN import STGCN
 from libcity.model.traffic_speed_prediction.GWNET import GWNET
 from libcity.model.traffic_speed_prediction.MTGNN import MTGNN
+from libcity.model.traffic_speed_prediction.BMTGNN import BMTGNN
 from libcity.model.traffic_speed_prediction.TGCLSTM import TGCLSTM
 from libcity.model.traffic_speed_prediction.TGCN import TGCN
 from libcity.model.traffic_speed_prediction.RNN import RNN
@@ -72,6 +73,7 @@ __all__ = [
     "Seq2Seq",
     "AutoEncoder",
     "MTGNN",
+    "BMTGNN",
     "ATDM",
     "GMAN",
     "GTS",
