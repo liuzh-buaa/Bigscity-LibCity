@@ -90,7 +90,7 @@ class BDCRNNVariableDecoderShared(BDCRNNBase):
 
         return outputs
 
-    def forward(self, batch, batches_seen=None):
+    def forward(self, batch, batches_seen=None, switch_outputs=True, switch_sigma_0=True):
         """
         seq2seq forward pass
 
@@ -99,6 +99,8 @@ class BDCRNNVariableDecoderShared(BDCRNNBase):
                 batch['X']: shape (batch_size, input_window, num_nodes, input_dim) \n
                 batch['y']: shape (batch_size, output_window, num_nodes, output_dim) \n
             batches_seen: batches seen till now
+            switch_outputs: whether to predict outputs
+            switch_sigma_0: whether to predict sigma_0
 
         Returns:
             torch.tensor: (batch_size, self.output_window, self.num_nodes, self.output_dim)
@@ -119,19 +121,22 @@ class BDCRNNVariableDecoderShared(BDCRNNBase):
         encoder_hidden_state = self.encoder(inputs)
         # (num_layers, batch_size, self.hidden_state_size)
         self._logger.debug("Encoder complete")
-        outputs = self.decoder(encoder_hidden_state, labels, batches_seen=batches_seen)
-        # (self.output_window, batch_size, self.num_nodes * self.output_dim)
-        self._logger.debug("Decoder complete")
 
-        self._logger.debug("Encoder sigma complete")
-        sigma_0 = self.decoder_sigma(encoder_hidden_state, labels, batches_seen=batches_seen)
-        # (self.output_window, batch_size, self.num_nodes * self.output_dim)
-        self._logger.debug("Decoder sigma complete")
+        outputs = sigma_0 = None
+        if switch_outputs:
+            outputs = self.decoder(encoder_hidden_state, labels, batches_seen=batches_seen)
+            # (self.output_window, batch_size, self.num_nodes * self.output_dim)
+            outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
+            self._logger.debug("Decoder outputs complete")
+
+        if switch_sigma_0:
+            sigma_0 = self.decoder_sigma(encoder_hidden_state, labels, batches_seen=batches_seen)
+            # (self.output_window, batch_size, self.num_nodes * self.output_dim)
+            sigma_0 = sigma_0.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
+            self._logger.debug("Decoder sigma complete")
 
         if batches_seen == 0:
             self._logger.info("Total trainable parameters {}".format(count_parameters(self)))
-        outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
-        sigma_0 = sigma_0.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
         return outputs, sigma_0
 
     def calculate_loss(self, batch, batches_seen=None, num_batches=1):
@@ -152,13 +157,14 @@ class BDCRNNVariableDecoderShared(BDCRNNBase):
             raise NotImplementedError('Unrecognized loss function.')
 
     def predict(self, batch, batches_seen=None):
-        return self.forward(batch, batches_seen)[0]
+        return self.forward(batch, batches_seen, switch_outputs=True, switch_sigma_0=False)[0]
 
     def predict_sigma(self, batch, batches_seen=None):
+        sigma_0 = self.forward(batch, batches_seen, switch_outputs=False, switch_sigma_0=True)[1]
         ll = self.clamp_function.split('_')
         if ll[0] == 'relu':
-            return torch.clamp(self.forward(batch, batches_seen)[1], min=float(ll[1]))
+            return torch.clamp(sigma_0, min=float(ll[1]))
         elif ll[0] == 'Softplus':
-            return torch.nn.Softplus(beta=int(ll[1]))(self.forward(batch, batches_seen)[1])
+            return torch.nn.Softplus(beta=int(ll[1]))(sigma_0)
         else:
             raise NotImplementedError('Unrecognized loss function.')

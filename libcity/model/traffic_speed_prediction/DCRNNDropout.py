@@ -141,7 +141,7 @@ class DCRNNDropout(AbstractTrafficStateModel, Seq2SeqAttrs):
         outputs = torch.stack(outputs)
         return outputs
 
-    def forward(self, batch, batches_seen=None):
+    def forward(self, batch, batches_seen=None, switch_outputs=True, switch_sigma_0=True):
         """
         seq2seq forward pass
 
@@ -150,6 +150,8 @@ class DCRNNDropout(AbstractTrafficStateModel, Seq2SeqAttrs):
                 batch['X']: shape (batch_size, input_window, num_nodes, input_dim) \n
                 batch['y']: shape (batch_size, output_window, num_nodes, output_dim) \n
             batches_seen: batches seen till now
+            switch_outputs: whether to predict outputs
+            switch_sigma_0: whether to predict sigma_0
 
         Returns:
             torch.tensor: (batch_size, self.output_window, self.num_nodes, self.output_dim)
@@ -170,19 +172,24 @@ class DCRNNDropout(AbstractTrafficStateModel, Seq2SeqAttrs):
         encoder_hidden_state = self.encoder(inputs)
         # (num_layers, batch_size, self.hidden_state_size)
         self._logger.debug("Encoder complete")
-        encoder_hidden_state1 = nn.Dropout(self.mu_dropout)(encoder_hidden_state)
-        encoder_hidden_state2 = nn.Dropout(self.sigma_dropout)(encoder_hidden_state)
-        self._logger.debug("Dropout complete")
-        outputs = self.decoder1(encoder_hidden_state1, labels, batches_seen=batches_seen)
-        sigmas = self.decoder2(encoder_hidden_state2, labels, batches_seen=batches_seen)
-        # (self.output_window, batch_size, self.num_nodes * self.output_dim)
-        self._logger.debug("Decoder complete")
+        outputs = sigma_0 = None
+        if switch_outputs:
+            encoder_hidden_state1 = nn.Dropout(self.mu_dropout)(encoder_hidden_state)
+            outputs = self.decoder1(encoder_hidden_state1, labels, batches_seen=batches_seen)
+            # (self.output_window, batch_size, self.num_nodes * self.output_dim)
+            outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
+            self._logger.debug("Decoder outputs complete")
+        if switch_sigma_0:
+            encoder_hidden_state2 = nn.Dropout(self.sigma_dropout)(encoder_hidden_state)
+            sigma_0 = self.decoder2(encoder_hidden_state2, labels, batches_seen=batches_seen)
+            # (self.output_window, batch_size, self.num_nodes * self.output_dim)
+            sigma_0 = sigma_0.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
+            self._logger.debug("Decoder sigma complete")
 
         if batches_seen == 0:
             self._logger.info("Total trainable parameters {}".format(count_parameters(self)))
-        outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
-        sigmas = sigmas.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
-        return outputs, sigmas
+
+        return outputs, sigma_0
 
     def calculate_loss(self, batch, batches_seen=None, num_batches=1):
         y_true = batch['y']
@@ -213,7 +220,17 @@ class DCRNNDropout(AbstractTrafficStateModel, Seq2SeqAttrs):
         return loss.masked_mae_torch(y_predicted, y_true, 0)
 
     def predict(self, batch, batches_seen=None):
-        return self.forward(batch, batches_seen)[0]
+        return self.forward(batch, batches_seen, switch_outputs=True, switch_sigma_0=False)[0]
+
+    def predict_sigma(self, batch, batches_seen=None):
+        sigma_0 = self.forward(batch, batches_seen, switch_outputs=False, switch_sigma_0=True)[1]
+        ll = self.clamp_function.split('_')
+        if ll[0] == 'relu':
+            return torch.clamp(sigma_0, min=float(ll[1]))
+        elif ll[0] == 'Softplus':
+            return torch.nn.Softplus(beta=int(ll[1]))(sigma_0)
+        else:
+            raise NotImplementedError('Unrecognized loss function.')
 
     def _get_kl_sum(self):
         kl_sum = 0
