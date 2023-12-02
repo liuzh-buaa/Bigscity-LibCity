@@ -1,12 +1,15 @@
 from __future__ import division
+
+import numbers
+from logging import getLogger
+
 import torch
 import torch.nn as nn
-from torch.nn import init
-import numbers
 import torch.nn.functional as F
-from logging import getLogger
-from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from torch.nn import init
+
 from libcity.model import loss
+from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 class NConv(nn.Module):
@@ -52,7 +55,7 @@ class Prop(nn.Module):
         dv = d
         a = adj / dv.view(-1, 1)
         for i in range(self.gdep):
-            h = self.alpha*x + (1-self.alpha)*self.nconv(h, a)
+            h = self.alpha * x + (1 - self.alpha) * self.nconv(h, a)
         ho = self.mlp(h)
         return ho
 
@@ -61,7 +64,7 @@ class MixProp(nn.Module):
     def __init__(self, c_in, c_out, gdep, dropout, alpha):
         super(MixProp, self).__init__()
         self.nconv = NConv()
-        self.mlp = Linear((gdep+1)*c_in, c_out)
+        self.mlp = Linear((gdep + 1) * c_in, c_out)
         self.gdep = gdep
         self.dropout = dropout
         self.alpha = alpha
@@ -73,7 +76,7 @@ class MixProp(nn.Module):
         out = [h]
         a = adj / d.view(-1, 1)
         for i in range(self.gdep):
-            h = self.alpha*x + (1-self.alpha)*self.nconv(h, a)
+            h = self.alpha * x + (1 - self.alpha) * self.nconv(h, a)
             out.append(h)
         ho = torch.cat(out, dim=1)
         ho = self.mlp(ho)
@@ -84,8 +87,8 @@ class DyMixprop(nn.Module):
     def __init__(self, c_in, c_out, gdep, dropout, alpha):
         super(DyMixprop, self).__init__()
         self.nconv = DyNconv()
-        self.mlp1 = Linear((gdep+1)*c_in, c_out)
-        self.mlp2 = Linear((gdep+1)*c_in, c_out)
+        self.mlp1 = Linear((gdep + 1) * c_in, c_out)
+        self.mlp2 = Linear((gdep + 1) * c_in, c_out)
 
         self.gdep = gdep
         self.dropout = dropout
@@ -103,7 +106,7 @@ class DyMixprop(nn.Module):
         h = x
         out = [h]
         for i in range(self.gdep):
-            h = self.alpha*x + (1-self.alpha)*self.nconv(h, adj0)
+            h = self.alpha * x + (1 - self.alpha) * self.nconv(h, adj0)
             out.append(h)
         ho = torch.cat(out, dim=1)
         ho1 = self.mlp1(ho)
@@ -115,7 +118,7 @@ class DyMixprop(nn.Module):
             out.append(h)
         ho = torch.cat(out, dim=1)
         ho2 = self.mlp2(ho)
-        return ho1+ho2
+        return ho1 + ho2
 
 
 class Dilated1D(nn.Module):
@@ -135,7 +138,7 @@ class DilatedInception(nn.Module):
         super(DilatedInception, self).__init__()
         self.tconv = nn.ModuleList()
         self.kernel_set = [2, 3, 6, 7]
-        cout = int(cout/len(self.kernel_set))
+        cout = int(cout / len(self.kernel_set))
         for kern in self.kernel_set:
             self.tconv.append(nn.Conv2d(cin, cout, (1, kern), dilation=(1, dilation_factor)))
 
@@ -177,16 +180,16 @@ class GraphConstructor(nn.Module):
             nodevec1 = self.static_feat[idx, :]
             nodevec2 = nodevec1
 
-        nodevec1 = torch.tanh(self.alpha*self.lin1(nodevec1))
-        nodevec2 = torch.tanh(self.alpha*self.lin2(nodevec2))
+        nodevec1 = torch.tanh(self.alpha * self.lin1(nodevec1))
+        nodevec2 = torch.tanh(self.alpha * self.lin2(nodevec2))
 
-        a = torch.mm(nodevec1, nodevec2.transpose(1, 0))-torch.mm(nodevec2, nodevec1.transpose(1, 0))
-        adj = F.relu(torch.tanh(self.alpha*a))
+        a = torch.mm(nodevec1, nodevec2.transpose(1, 0)) - torch.mm(nodevec2, nodevec1.transpose(1, 0))
+        adj = F.relu(torch.tanh(self.alpha * a))
         mask = torch.zeros(idx.size(0), idx.size(0)).to(self.device)
         mask.fill_(float('0'))
         s1, t1 = adj.topk(self.k, 1)
         mask.scatter_(1, t1, s1.fill_(1))
-        adj = adj*mask
+        adj = adj * mask
         return adj
 
     def fulla(self, idx):
@@ -197,11 +200,11 @@ class GraphConstructor(nn.Module):
             nodevec1 = self.static_feat[idx, :]
             nodevec2 = nodevec1
 
-        nodevec1 = torch.tanh(self.alpha*self.lin1(nodevec1))
-        nodevec2 = torch.tanh(self.alpha*self.lin2(nodevec2))
+        nodevec1 = torch.tanh(self.alpha * self.lin1(nodevec1))
+        nodevec2 = torch.tanh(self.alpha * self.lin2(nodevec2))
 
-        a = torch.mm(nodevec1, nodevec2.transpose(1, 0))-torch.mm(nodevec2, nodevec1.transpose(1, 0))
-        adj = F.relu(torch.tanh(self.alpha*a))
+        a = torch.mm(nodevec1, nodevec2.transpose(1, 0)) - torch.mm(nodevec2, nodevec1.transpose(1, 0))
+        adj = F.relu(torch.tanh(self.alpha * a))
         return adj
 
 
@@ -240,16 +243,16 @@ class GraphUndirected(nn.Module):
             nodevec1 = self.static_feat[idx, :]
             nodevec2 = nodevec1
 
-        nodevec1 = torch.tanh(self.alpha*self.lin1(nodevec1))
-        nodevec2 = torch.tanh(self.alpha*self.lin1(nodevec2))
+        nodevec1 = torch.tanh(self.alpha * self.lin1(nodevec1))
+        nodevec2 = torch.tanh(self.alpha * self.lin1(nodevec2))
 
         a = torch.mm(nodevec1, nodevec2.transpose(1, 0))
-        adj = F.relu(torch.tanh(self.alpha*a))
+        adj = F.relu(torch.tanh(self.alpha * a))
         mask = torch.zeros(idx.size(0), idx.size(0)).to(self.device)
         mask.fill_(float('0'))
         s1, t1 = adj.topk(self.k, 1)
         mask.scatter_(1, t1, s1.fill_(1))
-        adj = adj*mask
+        adj = adj * mask
         return adj
 
 
@@ -281,16 +284,16 @@ class GraphDirected(nn.Module):
             nodevec1 = self.static_feat[idx, :]
             nodevec2 = nodevec1
 
-        nodevec1 = torch.tanh(self.alpha*self.lin1(nodevec1))
-        nodevec2 = torch.tanh(self.alpha*self.lin2(nodevec2))
+        nodevec1 = torch.tanh(self.alpha * self.lin1(nodevec1))
+        nodevec2 = torch.tanh(self.alpha * self.lin2(nodevec2))
 
         a = torch.mm(nodevec1, nodevec2.transpose(1, 0))
-        adj = F.relu(torch.tanh(self.alpha*a))
+        adj = F.relu(torch.tanh(self.alpha * a))
         mask = torch.zeros(idx.size(0), idx.size(0)).to(self.device)
         mask.fill_(float('0'))
         s1, t1 = adj.topk(self.k, 1)
         mask.scatter_(1, t1, s1.fill_(1))
-        adj = adj*mask
+        adj = adj * mask
         return adj
 
 
@@ -327,7 +330,7 @@ class LayerNorm(nn.Module):
 
     def extra_repr(self):
         return '{normalized_shape}, eps={eps}, ' \
-            'elementwise_affine={elementwise_affine}'.format(**self.__dict__)
+               'elementwise_affine={elementwise_affine}'.format(**self.__dict__)
 
 
 class MTGNN(AbstractTrafficStateModel):
@@ -392,24 +395,25 @@ class MTGNN(AbstractTrafficStateModel):
 
         kernel_size = 7
         if self.dilation_exponential > 1:
-            self.receptive_field = int(self.output_dim + (kernel_size-1) * (self.dilation_exponential**self.layers-1)
-                                       / (self.dilation_exponential - 1))
+            self.receptive_field = int(
+                self.output_dim + (kernel_size - 1) * (self.dilation_exponential ** self.layers - 1)
+                / (self.dilation_exponential - 1))
         else:
-            self.receptive_field = self.layers * (kernel_size-1) + self.output_dim
+            self.receptive_field = self.layers * (kernel_size - 1) + self.output_dim
 
         for i in range(1):
             if self.dilation_exponential > 1:
-                rf_size_i = int(1 + i * (kernel_size-1) * (self.dilation_exponential**self.layers-1)
+                rf_size_i = int(1 + i * (kernel_size - 1) * (self.dilation_exponential ** self.layers - 1)
                                 / (self.dilation_exponential - 1))
             else:
                 rf_size_i = i * self.layers * (kernel_size - 1) + 1
             new_dilation = 1
-            for j in range(1, self.layers+1):
+            for j in range(1, self.layers + 1):
                 if self.dilation_exponential > 1:
-                    rf_size_j = int(rf_size_i + (kernel_size-1) * (self.dilation_exponential**j - 1)
+                    rf_size_j = int(rf_size_i + (kernel_size - 1) * (self.dilation_exponential ** j - 1)
                                     / (self.dilation_exponential - 1))
                 else:
-                    rf_size_j = rf_size_i+j*(kernel_size-1)
+                    rf_size_j = rf_size_i + j * (kernel_size - 1)
 
                 self.filter_convs.append(DilatedInception(self.residual_channels,
                                                           self.conv_channels, dilation_factor=new_dilation))
@@ -419,10 +423,10 @@ class MTGNN(AbstractTrafficStateModel):
                                                      out_channels=self.residual_channels, kernel_size=(1, 1)))
                 if self.input_window > self.receptive_field:
                     self.skip_convs.append(nn.Conv2d(in_channels=self.conv_channels, out_channels=self.skip_channels,
-                                                     kernel_size=(1, self.input_window-rf_size_j+1)))
+                                                     kernel_size=(1, self.input_window - rf_size_j + 1)))
                 else:
                     self.skip_convs.append(nn.Conv2d(in_channels=self.conv_channels, out_channels=self.skip_channels,
-                                                     kernel_size=(1, self.receptive_field-rf_size_j+1)))
+                                                     kernel_size=(1, self.receptive_field - rf_size_j + 1)))
 
                 if self.gcn_true:
                     self.gconv1.append(MixProp(self.conv_channels, self.residual_channels,
@@ -451,7 +455,7 @@ class MTGNN(AbstractTrafficStateModel):
                                    kernel_size=(1, self.input_window), bias=True)
             self.skipE = nn.Conv2d(in_channels=self.residual_channels,
                                    out_channels=self.skip_channels,
-                                   kernel_size=(1, self.input_window-self.receptive_field+1), bias=True)
+                                   kernel_size=(1, self.input_window - self.receptive_field + 1), bias=True)
         else:
             self.skip0 = nn.Conv2d(in_channels=self.feature_dim,
                                    out_channels=self.skip_channels, kernel_size=(1, self.receptive_field), bias=True)
@@ -466,32 +470,33 @@ class MTGNN(AbstractTrafficStateModel):
         assert inputs.size(3) == self.input_window, 'input sequence length not equal to preset sequence length'
 
         if self.input_window < self.receptive_field:
-            inputs = nn.functional.pad(inputs, (self.receptive_field-self.input_window, 0, 0, 0))
+            inputs = nn.functional.pad(inputs, (self.receptive_field - self.input_window, 0, 0, 0))
+            # (batch_size, feature_dim, num_nodes, receptive_field)
 
         if self.gcn_true:
             if self.buildA_true:
                 if idx is None:
                     adp = self.gc(self.idx)
                 else:
-                    adp = self.gc(idx)
+                    adp = self.gc(idx)  # (num_nodes, num_nodes)
             else:
                 adp = self.predefined_A
 
-        x = self.start_conv(inputs)
-        skip = self.skip0(F.dropout(inputs, self.dropout, training=self.training))
+        x = self.start_conv(inputs)  # (16, 2, 207, 19)->(16, 32, 207, 19)
+        skip = self.skip0(F.dropout(inputs, self.dropout, training=self.training))  # (16, 64, 207, 1)
         for i in range(self.layers):
             residual = x
-            filters = self.filter_convs[i](x)
+            filters = self.filter_convs[i](x)  # (16, 32, 207, 13)
             filters = torch.tanh(filters)
-            gate = self.gate_convs[i](x)
+            gate = self.gate_convs[i](x)  # (16, 32, 207, 13)
             gate = torch.sigmoid(gate)
-            x = filters * gate
+            x = filters * gate  # (16, 32, 207, 13)
             x = F.dropout(x, self.dropout, training=self.training)
             s = x
-            s = self.skip_convs[i](s)
+            s = self.skip_convs[i](s)  # (16, 64, 207, 1)
             skip = s + skip
             if self.gcn_true:
-                x = self.gconv1[i](x, adp)+self.gconv2[i](x, adp.transpose(1, 0))
+                x = self.gconv1[i](x, adp) + self.gconv2[i](x, adp.transpose(1, 0))  # (16, 32, 207, 13)
             else:
                 x = self.residual_convs[i](x)
 
@@ -525,7 +530,7 @@ class MTGNN(AbstractTrafficStateModel):
             if batches_seen % self.step_size == 0 and self.task_level < self.output_window:
                 self.task_level += 1
                 self._logger.info('Training: task_level increase from {} to {}'.format(
-                    self.task_level-1, self.task_level))
+                    self.task_level - 1, self.task_level))
                 self._logger.info('Current batches_seen is {}'.format(batches_seen))
             if self.use_curriculum_learning:
                 return loss.masked_mae_torch(y_predicted[:, :self.task_level, :, :],
