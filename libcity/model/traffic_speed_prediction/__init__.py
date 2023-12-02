@@ -1,4 +1,5 @@
 from libcity.model.traffic_speed_prediction.DCRNN import DCRNN
+from libcity.model.traffic_speed_prediction.DCRNNDropout import DCRNNDropout
 from libcity.model.traffic_speed_prediction.BDCRNNConstant import BDCRNNConstant
 from libcity.model.traffic_speed_prediction.BDCRNNConstantShared import BDCRNNConstantShared
 from libcity.model.traffic_speed_prediction.BDCRNNVariable import BDCRNNVariable
@@ -81,5 +82,6 @@ __all__ = [
     "STTN",
     "D2STGNN",
     "FNN",
-    "STID"
+    "STID",
+    "DCRNNDropout"
 ]

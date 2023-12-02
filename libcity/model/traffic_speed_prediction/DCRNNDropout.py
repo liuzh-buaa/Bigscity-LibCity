@@ -53,6 +53,13 @@ class DCRNNDropout(AbstractTrafficStateModel, Seq2SeqAttrs):
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
 
+        self.mu_dropout = config.get('mu_dropout')
+        self.sigma_dropout = config.get('sigma_dropout')
+        self.loss_function = config.get('loss_function')
+        self.clamp_function = config.get('clamp_function', 'null')
+        self.reg_encoder = config.get('reg_encoder', False)
+        self.reg_decoder = config.get('reg_decoder', False)
+
     def _compute_sampling_threshold(self, batches_seen):
         return self.cl_decay_steps / (
                 self.cl_decay_steps + np.exp(batches_seen / self.cl_decay_steps))
@@ -177,12 +184,26 @@ class DCRNNDropout(AbstractTrafficStateModel, Seq2SeqAttrs):
         sigmas = sigmas.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
         return outputs, sigmas
 
-    def calculate_loss(self, batch, batches_seen=None):
+    def calculate_loss(self, batch, batches_seen=None, num_batches=1):
         y_true = batch['y']
-        y_predicted = self.predict(batch, batches_seen)
+        y_predicted, sigma_0 = self.forward(batch, batches_seen)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        return loss.masked_mae_torch(y_predicted, y_true, 0)
+        ll = self.clamp_function.split('_')
+        if self.loss_function == 'masked_mae' and ll[0] == 'relu':
+            return loss.masked_mae_relu_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0,
+                                                  float(ll[1]))
+        elif self.loss_function == 'masked_mae' and ll[0] == 'Softplus':
+            return loss.masked_mae_softplus_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0,
+                                                      int(ll[1]))
+        elif self.loss_function == 'masked_mse' and ll[0] == 'relu':
+            return loss.masked_mse_relu_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0,
+                                                  float(ll[1]))
+        elif self.loss_function == 'masked_mse' and ll[0] == 'Softplus':
+            return loss.masked_mse_softplus_reg_torch(y_predicted, y_true, sigma_0, self._get_kl_sum() / num_batches, 0,
+                                                      int(ll[1]))
+        else:
+            raise NotImplementedError('Unrecognized loss function.')
 
     def calculate_eval_loss(self, batch, batches_seen=None):
         y_true = batch['y']
@@ -192,4 +213,12 @@ class DCRNNDropout(AbstractTrafficStateModel, Seq2SeqAttrs):
         return loss.masked_mae_torch(y_predicted, y_true, 0)
 
     def predict(self, batch, batches_seen=None):
-        return self.forward(batch, batches_seen)
+        return self.forward(batch, batches_seen)[0]
+
+    def _get_kl_sum(self):
+        kl_sum = 0
+        if self.reg_encoder:
+            kl_sum += self.encoder_model.get_kl_sum()
+        if self.reg_decoder:
+            kl_sum += self.decoder_model.get_kl_sum()
+        return kl_sum
