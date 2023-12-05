@@ -155,6 +155,8 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 77290-BDCRNNVariableDecoder-METR_LA-Nov-01-2023_14-28-56.log shuffle=True sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 learning_rate=0.005 lr_decay_ratio=0.5 (5.27)
 38397-BDCRNNVariableDecoder-METR_LA-Nov-01-2023_14-31-22.log shuffle=False sigma_pi=sigma_sigma_pi=1 sigma_start=sigma_sigma_start=0.01 learning_rate=0.005 lr_decay_ratio=0.5 (failed)
 
+11522-DCRNNDropout-METR_LA-Dec-02-2023_16-27-01.log (5.37)
+
 53537-MTGNN-METR_LA-Nov-30-2023_04-39-24.log (5.13)
 
 67517-STTN-METR_LA-Nov-30-2023_04-34-10.log (7.49)
