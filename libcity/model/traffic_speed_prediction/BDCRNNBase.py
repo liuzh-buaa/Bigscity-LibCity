@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+import libcity.interpreter_methods
 from libcity.model import loss
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model.covert_dcrnn_to_b import convert_dcrnn_to_bdcrnn
@@ -345,3 +346,17 @@ class BDCRNNBase(AbstractTrafficStateModel, Seq2SeqAttrs):
         if self.reg_decoder_sigma_0:
             kl_sum += self.decoder_sigma_model.get_kl_sum()
         return kl_sum
+
+    def get_interpret(self, x, output_window, num_nodes, output_dim):
+        interpreter = libcity.interpreter_methods.interpreter(self)
+        x_clone = x.detach().clone().requires_grad_()
+        statistic = interpreter.interpret(x_clone, output_window, num_nodes, output_dim)
+        interpreter.release()
+        return statistic
+
+    def get_interpret_sigma(self, x, output_window, num_nodes, output_dim):
+        interpreter = libcity.interpreter_methods.interpreter(self)
+        x_clone = x.detach().clone().requires_grad_()
+        statistic = interpreter.interpret_sigma(x_clone, output_window, num_nodes, output_dim)
+        interpreter.release()
+        return statistic
