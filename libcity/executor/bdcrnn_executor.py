@@ -8,6 +8,7 @@ from ray import tune
 
 from libcity.executor.traffic_state_executor import TrafficStateExecutor
 from libcity.model import loss
+from libcity.utils import ensure_dir
 from libcity.utils.stats import kde_bayes_factor
 
 
@@ -15,6 +16,7 @@ class BDCRNNExecutor(TrafficStateExecutor):
     def __init__(self, config, model, data_feature):
         TrafficStateExecutor.__init__(self, config, model, data_feature)
         self.testing_res_dir = './libcity/cache/{}/testing_cache'.format(self.exp_id)
+        ensure_dir(self.testing_res_dir)
 
     def _build_train_loss(self):
         """
@@ -127,9 +129,9 @@ class BDCRNNExecutor(TrafficStateExecutor):
             self._logger.info('Start hypothesis testing {}...'.format(i))
             batch.to_tensor(self.device)
             for ow in [3, 6, 12]:
-                for nn in num_nodes:
-                    for od in output_dim:
-                        samples = torch.stack([self.model.get_interpret(batch, ow, nn, od)
+                for nn in range(num_nodes):
+                    for od in range(output_dim):
+                        samples = torch.stack([self.model.get_interpret(batch['X'], ow, nn, od)
                                                for _ in range(testing_samples)]).cpu().numpy()
                         filename = 'gradient_samples_{}_{}_{}_{}.npy'.format(i, ow, nn, od)
                         np.save(os.path.join(self.testing_res_dir, filename), samples)

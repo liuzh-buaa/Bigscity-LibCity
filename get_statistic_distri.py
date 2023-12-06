@@ -82,4 +82,5 @@ if __name__ == '__main__':
     executor.load_model(model_cache_file)
     # 评估，评估结果将会放在 cache/evaluate_cache 下
     # executor.evaluate(test_data)
-    executor.testing(test_data)
+    executor.testing(test_data, args.start, args.end, config.get('output_window'), config.get('num_nodes'),
+                     config.get('output_dim'), args.testing_samples)

@@ -11,7 +11,7 @@ class Interpreter(object):
         self.model.eval()
         with torch.enable_grad():
             self.model.zero_grad()
-            model_output = self.model.predict(x)
+            model_output = self.model.predict_without_y(x)
             model_output_sum = torch.sum(model_output[:, output_window, num_nodes, output_dim])
             model_output_sum.backward()
             return x.grad.data.clone().detach()
@@ -21,7 +21,7 @@ class Interpreter(object):
         self.model.eval()
         with torch.enable_grad():
             self.model.zero_grad()
-            model_output = self.model.predict_sigma(x)
+            model_output = self.model.predict_sigma_without_y(x)
             model_output_sum = torch.sum(model_output[:, output_window, num_nodes, output_dim])
             model_output_sum.backward()
             return x.grad.data.clone().detach()

@@ -168,3 +168,19 @@ class BDCRNNVariableDecoderShared(BDCRNNBase):
             return torch.nn.Softplus(beta=int(ll[1]))(sigma_0)
         else:
             raise NotImplementedError('Unrecognized loss function.')
+
+    def predict_without_y(self, batchX, batches_seen=None):
+        batch = {'X': batchX, 'y': None}
+        return self.forward(batch, batches_seen, switch_outputs=True, switch_sigma_0=False)[0]
+
+    def predict_sigma_without_y(self, batchX, batches_seen=None):
+        batch = {'X': batchX, 'y': None}
+        sigma_0 = self.forward(batch, batches_seen, switch_outputs=False, switch_sigma_0=True)[1]
+        ll = self.clamp_function.split('_')
+        if ll[0] == 'relu':
+            return torch.clamp(sigma_0, min=float(ll[1]))
+        elif ll[0] == 'Softplus':
+            return torch.nn.Softplus(beta=int(ll[1]))(sigma_0)
+        else:
+            raise NotImplementedError('Unrecognized loss function.')
+
