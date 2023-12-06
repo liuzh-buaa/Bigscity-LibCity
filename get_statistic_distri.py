@@ -29,8 +29,16 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument('--model_cache_id', type=str, required=True,
                         help='load model config from {model_cache_id}')
-    parser.add_argument('--shuffle', type=str2bool, default=False,
-                        help='whether to shuffle the data')
+    # parser.add_argument('--shuffle', type=str2bool, default=False,
+    #                     help='whether to shuffle the data')
+    # parser.add_argument('--batch_size', type=int, default=64,
+    #                     help='not change if not necessary')
+    parser.add_argument('--start', type=int, default=0,
+                        help='begin testing at [start_batch]')
+    parser.add_argument('--end', type=int, default=10,
+                        help='testing [num_batch] batches')
+    parser.add_argument('--testing_samples', type=int, default=50,
+                        help='nums of samples for testing')
     # 增加其他可选的参数
     add_general_args(parser)
     # 解析参数
@@ -39,6 +47,9 @@ if __name__ == '__main__':
     other_args = {key: val for key, val in dict_args.items() if key not in [
         'task', 'model', 'dataset', 'config_file', 'saved_model', 'train'] and
                   val is not None}
+
+    args.shuffle = False
+    args.batch_size = 1
 
     # load config
     config = ConfigParser(args.task, args.model, args.dataset,
@@ -70,5 +81,5 @@ if __name__ == '__main__':
     assert os.path.exists(model_cache_file)
     executor.load_model(model_cache_file)
     # 评估，评估结果将会放在 cache/evaluate_cache 下
-    executor.evaluate(test_data)
-
+    # executor.evaluate(test_data)
+    executor.testing(test_data)

@@ -8,11 +8,13 @@ from ray import tune
 
 from libcity.executor.traffic_state_executor import TrafficStateExecutor
 from libcity.model import loss
+from libcity.utils.stats import kde_bayes_factor
 
 
 class BDCRNNExecutor(TrafficStateExecutor):
     def __init__(self, config, model, data_feature):
         TrafficStateExecutor.__init__(self, config, model, data_feature)
+        self.testing_res_dir = './libcity/cache/{}/testing_cache'.format(self.exp_id)
 
     def _build_train_loss(self):
         """
@@ -82,7 +84,8 @@ class BDCRNNExecutor(TrafficStateExecutor):
             for batch in test_dataloader:
                 batch.to_tensor(self.device)
                 output = torch.stack([self.model.predict(batch).detach().clone() for _ in range(self.evaluate_rep)])
-                sigma = torch.stack([self.model.predict_sigma(batch).detach().clone() for _ in range(self.evaluate_rep)])
+                sigma = torch.stack(
+                    [self.model.predict_sigma(batch).detach().clone() for _ in range(self.evaluate_rep)])
                 y_pred = torch.mean(output, dim=0)
                 y_true = self._scaler.inverse_transform(batch['y'][..., :self.output_dim])
                 y_pred = self._scaler.inverse_transform(y_pred[..., :self.output_dim])
@@ -108,6 +111,37 @@ class BDCRNNExecutor(TrafficStateExecutor):
             test_result = self.evaluator.save_result(self.evaluate_res_dir)
             return test_result
 
+    def testing(self, test_dataloader, start, end, output_window, num_nodes, output_dim, testing_samples):
+        """
+        use model to test data
+
+        Args:
+            test_dataloader(torch.Dataloader): Dataloader
+        """
+        self._logger.info('Start hypothesis testing ...')
+        for i, batch in enumerate(test_dataloader):
+            if i >= end:
+                break
+            if i < start:
+                continue
+            self._logger.info('Start hypothesis testing {}...'.format(i))
+            batch.to_tensor(self.device)
+            for ow in [3, 6, 12]:
+                for nn in num_nodes:
+                    for od in output_dim:
+                        samples = torch.stack([self.model.get_interpret(batch, ow, nn, od)
+                                               for _ in range(testing_samples)]).cpu().numpy()
+                        filename = 'gradient_samples_{}_{}_{}_{}.npy'.format(i, ow, nn, od)
+                        np.save(os.path.join(self.testing_res_dir, filename), samples)
+                        testing_results = np.apply_along_axis(
+                            lambda x: kde_bayes_factor(x), axis=0, arr=samples.reshape(testing_samples, -1)).reshape(
+                            2, output_window, num_nodes, output_dim)
+                        filename = 'ps_testing_{}_{}_{}_{}.npy'.format(i, ow, nn, od)
+                        np.save(os.path.join(self.testing_res_dir, filename), testing_results[0])
+                        filename = 'kde_bandwidth_{}_{}_{}_{}.npy'.format(i, ow, nn, od)
+                        np.save(os.path.join(self.testing_res_dir, filename), testing_results[1])
+        self._logger.info('Finish hypothesis testing ...')
+
     def train(self, train_dataloader, eval_dataloader):
         """
         use data to train model with config
@@ -128,7 +162,8 @@ class BDCRNNExecutor(TrafficStateExecutor):
         batches_seen = num_batches * self._epoch_num
         for epoch_idx in range(self._epoch_num, self.epochs):
             start_time = time.time()
-            losses, batches_seen = self._train_epoch(train_dataloader, epoch_idx, batches_seen, self.loss_func, num_batches)
+            losses, batches_seen = self._train_epoch(train_dataloader, epoch_idx, batches_seen, self.loss_func,
+                                                     num_batches)
             t1 = time.time()
             train_time.append(t1 - start_time)
             self._writer.add_scalar('training loss', np.mean(losses), batches_seen)
