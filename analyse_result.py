@@ -1,3 +1,7 @@
+"""
+    python analyse_result.py --model BDCRNNVariableDecoder --dataset METR_LA --exp_id 89148
+    python analyse_result.py --model BDCRNNVariableDecoderShared --dataset PEMS_BAY --exp_id 67654
+"""
 import argparse
 import os.path
 
@@ -9,9 +13,9 @@ from libcity.config import ConfigParser
 from libcity.utils import get_logger, ensure_dir
 
 if __name__ == '__main__':
+    plt.rc('font', family='Times New Roman', size=20)
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', type=str, default='traffic_state_pred')
-    parser.add_argument('--batch_size', type=int, default=256)
 
     parser.add_argument('--model', type=str, required=True)
     parser.add_argument('--exp_id', type=str, required=True)
@@ -21,14 +25,16 @@ if __name__ == '__main__':
     task, model_name, dataset_name, exp_id = args.task, args.model, args.dataset, args.exp_id
 
     # load config
-    config = ConfigParser(task, model_name, dataset_name,
-                          config_file=None, saved_model=False, train=False, other_args=None)
+    config = ConfigParser(task, model_name, dataset_name, saved_model=False, train=False)
     config['exp_id'] = exp_id
+    config['batch_size'] = 256
     # logger
     logger = get_logger(config)
     logger.info('Begin analyzing result, task={}, model_name={}, dataset_name={}, exp_id={}'.
                 format(str(task), str(model_name), str(dataset_name), str(exp_id)))
     logger.info(config.config)
+
+    batch_size = config['batch_size']
 
     evaluate_cache_dir = './libcity/cache/{}/evaluate_cache'.format(exp_id)
     analyze_cache_dir = './libcity/cache/{}/analyze_cache'.format(exp_id)
@@ -58,7 +64,7 @@ if __name__ == '__main__':
         logger.info(f'Analyzing node {i}...')
         # (num_data, output_window), (evaluate_rep, num_data, output_window)
         prediction_node, truth_node, outputs_node, sigmas_node = prediction[:, :, i], truth[:, :, i], \
-                                                                 outputs[:, :, :, i], sigmas[:, :, :, i]
+            outputs[:, :, :, i], sigmas[:, :, :, i]
         sigmas_node_2 = sigmas_node * sigmas_node
         outputs_node_2 = outputs_node * outputs_node
         prediction_node_2 = prediction_node * prediction_node
@@ -77,8 +83,8 @@ if __name__ == '__main__':
             columns_name.extend(['sigma_{}'.format(i) for i in range(evaluate_rep)])
             pd_data = pd.DataFrame(res, columns=columns_name)
             pd_data.to_excel(writer, sheet_name=time, float_format='%.4f')
-            for k in range(0, num_data, args.batch_size):
-                t_num = min(args.batch_size, num_data - k)
+            for k in range(0, num_data, batch_size):
+                t_num = min(batch_size, num_data - k)
                 x = np.arange(k, k + t_num)
                 mask = np.where(t[k: k + t_num], 1, 0)
                 plt.plot(x, np.abs(error[k:k + t_num]) * mask, label='|error|')
@@ -86,7 +92,7 @@ if __name__ == '__main__':
                 plt.plot(x, e_uncertainty[k:k + t_num] * mask, label='e_uncertainty')
                 plt.plot(x, uncertainty[k:k + t_num] * mask, label='uncertainty')
                 plt.legend()
-                plt.savefig(f'{images_cache_dir}/{dataset_name}_node_{i}_batch_{k // args.batch_size}_{time}.svg',
+                plt.savefig(f'{images_cache_dir}/{dataset_name}_node_{i}_batch_{k // batch_size}_{time}.svg',
                             bbox_inches='tight')
                 plt.close()
         writer.close()
