@@ -43,13 +43,12 @@ if __name__ == '__main__':
     add_general_args(parser)
     # 解析参数
     args = parser.parse_args()
+    args.shuffle = False
+    args.batch_size = 1
     dict_args = vars(args)
     other_args = {key: val for key, val in dict_args.items() if key not in [
         'task', 'model', 'dataset', 'config_file', 'saved_model', 'train'] and
                   val is not None}
-
-    args.shuffle = False
-    args.batch_size = 1
 
     # load config
     config = ConfigParser(args.task, args.model, args.dataset,
@@ -82,5 +81,5 @@ if __name__ == '__main__':
     executor.load_model(model_cache_file)
     # 评估，评估结果将会放在 cache/evaluate_cache 下
     # executor.evaluate(test_data)
-    executor.testing(test_data, args.start, args.end, config.get('output_window'), config.get('num_nodes'),
-                     config.get('output_dim'), args.testing_samples)
+    executor.testing(test_data, args.start, args.end, config.get('output_window'), config.get('output_dim'),
+                     args.testing_samples)

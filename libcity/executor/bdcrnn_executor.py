@@ -113,7 +113,7 @@ class BDCRNNExecutor(TrafficStateExecutor):
             test_result = self.evaluator.save_result(self.evaluate_res_dir)
             return test_result
 
-    def testing(self, test_dataloader, start, end, output_window, num_nodes, output_dim, testing_samples):
+    def testing(self, test_dataloader, start, end, output_window, output_dim, testing_samples):
         """
         use model to test data
 
@@ -128,6 +128,7 @@ class BDCRNNExecutor(TrafficStateExecutor):
                 continue
             self._logger.info('Start hypothesis testing {}...'.format(i))
             batch.to_tensor(self.device)
+            batch_size, input_window, num_nodes, input_dim = batch['X'].shape
             for ow in [3, 6, 12]:
                 for nn in range(num_nodes):
                     for od in range(output_dim):
@@ -137,7 +138,7 @@ class BDCRNNExecutor(TrafficStateExecutor):
                         np.save(os.path.join(self.testing_res_dir, filename), samples)
                         testing_results = np.apply_along_axis(
                             lambda x: kde_bayes_factor(x), axis=0, arr=samples.reshape(testing_samples, -1)).reshape(
-                            2, output_window, num_nodes, output_dim)
+                            2, input_window, num_nodes, input_dim)
                         filename = 'ps_testing_{}_{}_{}_{}.npy'.format(i, ow, nn, od)
                         np.save(os.path.join(self.testing_res_dir, filename), testing_results[0])
                         filename = 'kde_bandwidth_{}_{}_{}_{}.npy'.format(i, ow, nn, od)
