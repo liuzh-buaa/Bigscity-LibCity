@@ -1,5 +1,7 @@
 """
 训练并评估单一模型的脚本
+python run_model.py --task traffic_state_pred --dataset METR_LA --model BDCRNNVariableDecoder
+python run_model.py --task traffic_state_pred --dataset PEMS_BAY --model BDCRNNVariableDecoderShared
 """
 
 import argparse
