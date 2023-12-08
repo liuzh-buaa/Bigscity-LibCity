@@ -77,10 +77,12 @@ if __name__ == '__main__':
             e_uncertainty = 1 / evaluate_rep * np.sum(o2, axis=0) - p2
             uncertainty = a_uncertainty + e_uncertainty
             res = np.stack((p, t, error, uncertainty, a_uncertainty, e_uncertainty), axis=1)
-            res = np.concatenate((res, o.T, s.T), axis=1)
+            res = np.concatenate((res, o[:5].T, s[:5].T), axis=1)
             columns_name = ['pred', 'truth', 'error', 'uncertainty', 'a_uncertainty', 'e_uncertainty']
-            columns_name.extend(['output_{}'.format(i) for i in range(evaluate_rep)])
-            columns_name.extend(['sigma_{}'.format(i) for i in range(evaluate_rep)])
+            # columns_name.extend(['output_{}'.format(i) for i in range(evaluate_rep)])
+            # columns_name.extend(['sigma_{}'.format(i) for i in range(evaluate_rep)])
+            columns_name.extend(['output_{}'.format(i) for i in range(5)])
+            columns_name.extend(['sigma_{}'.format(i) for i in range(5)])
             pd_data = pd.DataFrame(res, columns=columns_name)
             pd_data.to_excel(writer, sheet_name=time, float_format='%.4f')
             for k in range(0, num_data, batch_size):
