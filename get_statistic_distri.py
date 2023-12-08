@@ -29,10 +29,6 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument('--model_cache_id', type=str, required=True,
                         help='load model config from {model_cache_id}')
-    # parser.add_argument('--shuffle', type=str2bool, default=False,
-    #                     help='whether to shuffle the data')
-    # parser.add_argument('--batch_size', type=int, default=64,
-    #                     help='not change if not necessary')
     parser.add_argument('--start', type=int, default=0,
                         help='begin testing at [start_batch]')
     parser.add_argument('--end', type=int, default=10,

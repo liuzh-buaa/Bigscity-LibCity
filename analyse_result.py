@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from libcity.config import ConfigParser
-from libcity.utils import get_logger, ensure_dir
+from libcity.utils import get_logger, ensure_dir, get_local_time
 
 if __name__ == '__main__':
     plt.rc('font', family='Times New Roman', size=20)
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     batch_size = config['batch_size']
 
     evaluate_cache_dir = './libcity/cache/{}/evaluate_cache'.format(exp_id)
-    analyze_cache_dir = './libcity/cache/{}/analyze_cache'.format(exp_id)
+    analyze_cache_dir = './libcity/cache/{}/analyze_cache/{}'.format(exp_id, get_local_time())
     images_cache_dir = '{}/images'.format(analyze_cache_dir)
     assert os.path.exists(evaluate_cache_dir)
     ensure_dir(analyze_cache_dir)
@@ -52,13 +52,13 @@ if __name__ == '__main__':
 
     assert visited
     prediction, truth, outputs, sigmas = arr['prediction'], arr['truth'], arr['outputs'], arr['sigmas']
-    logger.info(f'prediction shape: {prediction.shape}')
-    logger.info(f'truth shape: {truth.shape}')
-    logger.info(f'outputs shape: {outputs.shape}')
-    logger.info(f'sigmas shape: {sigmas.shape}')
+    logger.info(f'prediction shape: {prediction.shape}')  # (6912, 12, 207, 1) (10432, 12, 325, 1)
+    logger.info(f'truth shape: {truth.shape}')  # (6912, 12, 207, 1) (10432, 12, 325, 1)
+    logger.info(f'outputs shape: {outputs.shape}')  # (30, 6912, 12, 207, 1) (30, 10432, 12, 325, 1)
+    logger.info(f'sigmas shape: {sigmas.shape}')  # (30, 6912, 12, 207, 1) (30, 10432, 12, 325, 1)
 
+    assert outputs.shape == sigmas.shape
     evaluate_rep, num_data, output_window, num_nodes, output_dim = outputs.shape
-    assert outputs.shape == sigmas.shape and output_dim == 1
     prediction, truth, outputs, sigmas = prediction[..., 0], truth[..., 0], outputs[..., 0], sigmas[..., 0]
     for i in range(10):
         logger.info(f'Analyzing node {i}...')
@@ -73,7 +73,7 @@ if __name__ == '__main__':
             p, t, o, s = prediction_node[:, j], truth_node[:, j], outputs_node[:, :, j], sigmas_node[:, :, j]
             p2, s2, o2 = prediction_node_2[:, j], sigmas_node_2[:, :, j], outputs_node_2[:, :, j]
             error = p - t
-            a_uncertainty = 1 / evaluate_rep * np.sum(s2, axis=0)
+            a_uncertainty = 1 / evaluate_rep * np.sum(s, axis=0)
             e_uncertainty = 1 / evaluate_rep * np.sum(o2, axis=0) - p2
             uncertainty = a_uncertainty + e_uncertainty
             res = np.stack((p, t, error, uncertainty, a_uncertainty, e_uncertainty), axis=1)
