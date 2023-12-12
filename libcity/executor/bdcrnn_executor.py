@@ -132,17 +132,34 @@ class BDCRNNExecutor(TrafficStateExecutor):
             for ow in [2, 5, 11]:
                 for nn in range(num_nodes):
                     for od in range(output_dim):
+                        self._logger.info('Start hypothesis testing ow={}, nn={}, od={}'.format(ow, nn, od))
                         samples = torch.stack([self.model.get_interpret(batch['X'], ow, nn, od)
                                                for _ in range(testing_samples)]).cpu().numpy()
+                        self._logger.info('Finish getting samples of {}'.format(samples.shape))
                         filename = 'gradient_samples_{}_{}_{}_{}.npy'.format(i, ow, nn, od)
                         np.save(os.path.join(self.testing_res_dir, filename), samples)
-                        testing_results = np.apply_along_axis(
-                            lambda x: kde_bayes_factor(x), axis=0, arr=samples.reshape(testing_samples, -1)).reshape(
-                            2, input_window, num_nodes, input_dim)
-                        filename = 'ps_testing_{}_{}_{}_{}.npy'.format(i, ow, nn, od)
-                        np.save(os.path.join(self.testing_res_dir, filename), testing_results[0])
-                        filename = 'kde_bandwidth_{}_{}_{}_{}.npy'.format(i, ow, nn, od)
-                        np.save(os.path.join(self.testing_res_dir, filename), testing_results[1])
+                        # testing_results = np.apply_along_axis(
+                        #     lambda x: kde_bayes_factor(x), axis=0, arr=samples.reshape(testing_samples, -1)).reshape(
+                        #     2, input_window, num_nodes, input_dim)
+                        # filename = 'ps_testing_{}_{}_{}_{}.npy'.format(i, ow, nn, od)
+                        # np.save(os.path.join(self.testing_res_dir, filename), testing_results[0])
+                        # filename = 'kde_bandwidth_{}_{}_{}_{}.npy'.format(i, ow, nn, od)
+                        # np.save(os.path.join(self.testing_res_dir, filename), testing_results[1])
+                        for test_nn in range(num_nodes):
+                            if test_nn == nn:
+                                testing_results = np.apply_along_axis(
+                                    lambda x: kde_bayes_factor(x), axis=0,
+                                    arr=samples[..., test_nn, :].reshape(testing_samples, -1)).reshape(
+                                    2, input_window, input_dim)  # only test current node for all input_window
+                            else:
+                                testing_results = np.apply_along_axis(
+                                    lambda x: kde_bayes_factor(x), axis=0,
+                                    arr=samples[..., input_window - 1, test_nn, :].reshape(testing_samples, -1)).reshape(
+                                    2, 1, input_dim)  # only test other nodes for the nearest input_window
+                            filename = 'ps_testing_{}_{}_{}_{}_{}.npy'.format(i, ow, nn, od, test_nn)
+                            np.save(os.path.join(self.testing_res_dir, filename), testing_results[0])
+                            filename = 'kde_bandwidth_{}_{}_{}_{}_{}.npy'.format(i, ow, nn, od, test_nn)
+                            np.save(os.path.join(self.testing_res_dir, filename), testing_results[1])
         self._logger.info('Finish hypothesis testing ...')
 
     def train(self, train_dataloader, eval_dataloader):

@@ -6,7 +6,7 @@ class Interpreter(object):
         self.model = model
         self.handles = []
 
-    # (batch_size, input_window, num_nodes, input_dim)->(batch_size, output_window, num_nodes, output_dim)
+    # (batch_size, input_window, num_nodes, input_dim)->(batch_size, input_window, num_nodes, input_dim)
     def interpret(self, x, output_window, num_nodes, output_dim):
         self.model.eval()
         with torch.enable_grad():
@@ -16,7 +16,7 @@ class Interpreter(object):
             model_output_sum.backward()
             return x.grad.data.clone().detach()
 
-    # (batch_size, input_window, num_nodes, input_dim)->(batch_size, output_window, num_nodes, output_dim)
+    # (batch_size, input_window, num_nodes, input_dim)->(batch_size, input_window, num_nodes, input_dim)
     def interpret_sigma(self, x, output_window, num_nodes, output_dim):
         self.model.eval()
         with torch.enable_grad():
