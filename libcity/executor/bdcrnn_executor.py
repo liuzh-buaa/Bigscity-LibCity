@@ -129,7 +129,7 @@ class BDCRNNExecutor(TrafficStateExecutor):
             self._logger.info('Start hypothesis testing {}...'.format(i))
             batch.to_tensor(self.device)
             batch_size, input_window, num_nodes, input_dim = batch['X'].shape
-            for ow in [3, 6, 12]:
+            for ow in [2, 5, 11]:
                 for nn in range(num_nodes):
                     for od in range(output_dim):
                         samples = torch.stack([self.model.get_interpret(batch['X'], ow, nn, od)
