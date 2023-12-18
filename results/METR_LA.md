@@ -166,4 +166,6 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 
 53537-MTGNN-METR_LA-Nov-30-2023_04-39-24.log (5.13)
 
+18652-STGCN-METR_LA-Dec-18-2023_11-48-53.log (7.65)
+
 67517-STTN-METR_LA-Nov-30-2023_04-34-10.log (7.49)
