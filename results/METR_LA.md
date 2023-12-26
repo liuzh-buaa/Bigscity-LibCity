@@ -157,8 +157,9 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 89148-BDCRNNVariableDecoder-METR_LA-Dec-05-2023_14-55-45.log only evaluating test_data based on 77290
 87083-BDCRNNVariableDecoder-METR_LA-Dec-06-2023_02-57-05.log only evaluating train_data based on 77290
 51598-BDCRNNVariableDecoder-METR_LA-Dec-08-2023_07-29-18.log train based on MSE (5.26, but worse MAE and MAPE)
-11529-BDCRNNVariableDecoder-METR_LA-Dec-12-2023_11-42-53.log only testing test_data based on 77290 (0-10)
-15333-BDCRNNVariableDecoder-METR_LA-Dec-12-2023_11-46-03.log only testing test_data based on 77290 (10-20)
+11529-BDCRNNVariableDecoder-METR_LA-Dec-12-2023_11-42-53.log only testing test_data based on 77290 (0-9)
+15333-BDCRNNVariableDecoder-METR_LA-Dec-12-2023_11-46-03.log only testing test_data based on 77290 (10-19)
+80588-BDCRNNVariableDecoder-METR_LA-Dec-26-2023_09-50-05.log only testing test_data based on 77290 (26)
 
 11522-DCRNNDropout-METR_LA-Dec-02-2023_16-27-01.log (5.37)
 

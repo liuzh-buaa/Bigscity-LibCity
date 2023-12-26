@@ -126,13 +126,15 @@ class BDCRNNExecutor(TrafficStateExecutor):
                 break
             if i < start:
                 continue
-            self._logger.info('Start hypothesis testing {}...'.format(i))
             batch.to_tensor(self.device)
             batch_size, input_window, num_nodes, input_dim = batch['X'].shape
+            y_true = self._scaler.inverse_transform(batch['y'][..., :self.output_dim])
+            assert batch_size == 1 and (batch_size, output_window, num_nodes, output_dim) == y_true.shape
             for ow in [2, 5, 11]:
                 for nn in range(num_nodes):
                     for od in range(output_dim):
-                        self._logger.info('Start hypothesis testing ow={}, nn={}, od={}'.format(ow, nn, od))
+                        self._logger.info('Start hypothesis testing {}={}: ow={}, nn={}, od={}'.format(
+                            i, y_true[0, ow, nn, od], ow, nn, od))
                         samples = torch.stack([self.model.get_interpret(batch['X'], ow, nn, od)
                                                for _ in range(testing_samples)]).cpu().numpy()
                         self._logger.info('Finish getting samples of {}'.format(samples.shape))
@@ -154,7 +156,8 @@ class BDCRNNExecutor(TrafficStateExecutor):
                             else:
                                 testing_results = np.apply_along_axis(
                                     lambda x: kde_bayes_factor(x), axis=0,
-                                    arr=samples[..., input_window - 1, test_nn, :].reshape(testing_samples, -1)).reshape(
+                                    arr=samples[..., input_window - 1, test_nn, :].reshape(testing_samples,
+                                                                                           -1)).reshape(
                                     2, 1, input_dim)  # only test other nodes for the nearest input_window
                             filename = 'ps_testing_{}_{}_{}_{}_{}.npy'.format(i, ow, nn, od, test_nn)
                             np.save(os.path.join(self.testing_res_dir, filename), testing_results[0])
