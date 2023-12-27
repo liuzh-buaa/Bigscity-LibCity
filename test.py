@@ -1,5 +1,6 @@
 import h5py
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 
@@ -48,14 +49,45 @@ def read_h5_file():
     # axis1 = store['axis1']
 
     f = h5py.File('raw_data/METR_LA/metr-la.h5', 'r')
-    data = f['array']
+    data_group = f['df']
+    axis0 = np.array(data_group['axis0'])
+    axis1 = np.array(data_group['axis1'])
+    block0_items = np.array(data_group['block0_items'])
+    block0_values = np.array(data_group['block0_values'])
+    df_metr_la = pd.DataFrame(block0_values)
+    for col_name, col_data in df_metr_la.iteritems():
+        col_df = pd.DataFrame(col_data)
+        col_df.to_csv(f'raw_data/METR_LA/{col_name}.csv', index=False)
     f.close()
 
     f = h5py.File('raw_data/PEMS_BAY/pems-bay.h5', 'r')
-    keys = f.keys()
-    data = f['data']
+    data_group = f['speed']
+    axis0 = np.array(data_group['axis0'])
+    axis1 = np.array(data_group['axis1'])
+    block0_items = np.array(data_group['block0_items'])
+    block0_values = np.array(data_group['block0_values'])
+    df_pems_bay = pd.DataFrame(block0_values)
+    for col_name, col_data in df_pems_bay.iteritems():
+        col_df = pd.DataFrame(col_data)
+        col_df.to_csv(f'raw_data/PEMS_BAY/{col_name}.csv', index=False)
     f.close()
 
 
+def explore_h5_file(filepath):
+    with h5py.File(filepath, 'r') as file:
+        # 递归函数用于遍历HDF5文件的结构
+        def explore(obj, indent=''):
+            for key, item in obj.items():
+                if isinstance(item, h5py.Group):
+                    print(f"{indent}Group: {key}")
+                    explore(item, indent + '  ')
+                elif isinstance(item, h5py.Dataset):
+                    print(f"{indent}Dataset: {key} - Shape: {item.shape}")
+
+        # 调用探索函数，开始遍历HDF5文件
+        explore(file)
+
+
 if __name__ == '__main__':
+    # explore_h5_file('raw_data/PEMS_BAY/pems-bay.h5')
     read_h5_file()
