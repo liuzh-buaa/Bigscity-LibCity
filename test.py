@@ -44,10 +44,6 @@ def plot_metric_comparison():
 
 
 def read_h5_file():
-    # store = pd.HDFStore('raw_data/METR_LA/metr-la.h5')
-    # axis0 = store['axis0']
-    # axis1 = store['axis1']
-
     f = h5py.File('raw_data/METR_LA/metr-la.h5', 'r')
     data_group = f['df']
     axis0 = np.array(data_group['axis0'])
@@ -60,6 +56,10 @@ def read_h5_file():
         col_df.to_csv(f'raw_data/METR_LA/{col_name}.csv', index=False)
     f.close()
 
+    with pd.HDFStore('raw_data/METR_LA/metr-la.h5', 'r') as d:
+        df = d.get('df')
+        df.index.to_frame().to_csv('raw_data/METR_LA/datetime.csv', index=False)
+
     f = h5py.File('raw_data/PEMS_BAY/pems-bay.h5', 'r')
     data_group = f['speed']
     axis0 = np.array(data_group['axis0'])
@@ -71,6 +71,10 @@ def read_h5_file():
         col_df = pd.DataFrame(col_data)
         col_df.to_csv(f'raw_data/PEMS_BAY/{col_name}.csv', index=False)
     f.close()
+
+    with pd.HDFStore('raw_data/PEMS_BAY/pems-bay.h5', 'r') as d:
+        df = d.get('speed')
+        df.index.to_frame().to_csv('raw_data/PEMS_BAY/datetime.csv', index=False)
 
 
 def explore_h5_file(filepath):
