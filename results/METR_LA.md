@@ -166,7 +166,8 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 70110-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_03-50-01.log (37-41) (l27452-l27456) (07:30-07:50)
 72784-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_03-51-57.log (42-47) (l27457-l27462) (07:55-08:20)
 27302-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_03-52-45.log (48-53) (l27463-l27468) (08:25-08:50)
-(175-187) (27590-27602) (19:00-20:00)
+21982-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_14-46-39.log (175-181) (l27590-l27596) (19:00-19:30)
+57707-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_14-47-31.log (182-187) (l27597-l27602) (19:35-20:00)
 
 11522-DCRNNDropout-METR_LA-Dec-02-2023_16-27-01.log (5.37)
 
@@ -175,3 +176,6 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 18652-STGCN-METR_LA-Dec-18-2023_11-48-53.log (7.65)
 
 67517-STTN-METR_LA-Nov-30-2023_04-34-10.log (7.49)
+
+1.正常情况t+1时刻的交通速度受周围所有传感器的影响 vs. 异常情况（不确定性比较大）时检测结果
+2.选取t+1时刻
