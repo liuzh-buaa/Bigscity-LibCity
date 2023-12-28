@@ -157,9 +157,16 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 89148-BDCRNNVariableDecoder-METR_LA-Dec-05-2023_14-55-45.log only evaluating test_data based on 77290
 87083-BDCRNNVariableDecoder-METR_LA-Dec-06-2023_02-57-05.log only evaluating train_data based on 77290
 51598-BDCRNNVariableDecoder-METR_LA-Dec-08-2023_07-29-18.log train based on MSE (5.26, but worse MAE and MAPE)
-11529-BDCRNNVariableDecoder-METR_LA-Dec-12-2023_11-42-53.log only testing test_data based on 77290 (0-9) (l27415-l27424, )
-15333-BDCRNNVariableDecoder-METR_LA-Dec-12-2023_11-46-03.log only testing test_data based on 77290 (10-19) (l27425-l27434, )
-80588-BDCRNNVariableDecoder-METR_LA-Dec-26-2023_09-50-05.log only testing test_data based on 77290 (26) (l27441, l27444, )
+11529-BDCRNNVariableDecoder-METR_LA-Dec-12-2023_11-42-53.log only testing test_data based on 77290 (0-9) (l27415-l27424, ) (04:25-05:10)
+15333-BDCRNNVariableDecoder-METR_LA-Dec-12-2023_11-46-03.log only testing test_data based on 77290 (10-19) (l27425-l27434, ) (05:15-06:00)
+98337-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_03-41-21.log only testing test_data based on 77290 (20-25) (l27435-l27440, ) (06:05-06:30)
+80588-BDCRNNVariableDecoder-METR_LA-Dec-26-2023_09-50-05.log only testing test_data based on 77290 (26) (l27441, l27444, ) (06:35-06:50)
+63269-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_03-44-00.log only testing test_data based on 77290 (27-31) (l27442-l27446, l27444, ) (06:40-07:00)
+90374-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_03-49-05.log (32-36) (l27447-l27451) (07:05-07:25)
+70110-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_03-50-01.log (37-41) (l27452-l27456) (07:30-07:50)
+72784-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_03-51-57.log (42-47) (l27457-l27462) (07:55-08:20)
+27302-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_03-52-45.log (48-53) (l27463-l27468) (08:25-08:50)
+(175-187) (27590-27602) (19:00-20:00)
 
 11522-DCRNNDropout-METR_LA-Dec-02-2023_16-27-01.log (5.37)
 
