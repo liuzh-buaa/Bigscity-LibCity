@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from visualize_sensor import visualize_sensor
+
 
 def get_exp_id(data, index):
     if data == 'METR_LA':
@@ -52,8 +54,8 @@ def get_exp_id(data, index):
 if __name__ == '__main__':
     plt.rc('font', family='Times New Roman', size=20)
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default='METR_LA', choices=['METR_LA', 'PEMS_BAY'])
-    parser.add_argument('--index', type=int, default=0)
+    parser.add_argument('--dataset', type=str, default='METR_LA', choices=['METR_LA', 'PEMS_BAY'])
+    parser.add_argument('--index', type=int, default=183)
     parser.add_argument('--ow', type=int, default=2, help='output window')
     parser.add_argument('--nn', type=int, default=0, help='node number')
     parser.add_argument('--od', type=int, default=0, help='output dim')
@@ -61,7 +63,7 @@ if __name__ == '__main__':
     # 解析参数
     args = parser.parse_args()
 
-    sensors = 207 if args.data == 'METR_LA' else 325
+    sensors = 207 if args.dataset == 'METR_LA' else 325
     if args.ow == -1:
         args.ow = [2, 5, 11]
     else:
@@ -72,7 +74,7 @@ if __name__ == '__main__':
     else:
         args.nn = [args.nn]
 
-    exp_id = get_exp_id(args.data, args.index)
+    exp_id = get_exp_id(args.dataset, args.index)
 
     testing_res_dir = './libcity/cache/{}/testing_cache'.format(exp_id)
     assert os.path.exists(testing_res_dir)
@@ -94,6 +96,7 @@ if __name__ == '__main__':
 
     for nn in args.nn:
         tot_data = []
+        indices = []
         for test_nn in range(sensors):
             filename = 'ps_testing_{}_{}_{}_{}_{}.npy'.format(args.index, 2, nn, args.od, test_nn)
             read_data = 1 - np.load(os.path.join(testing_res_dir, filename))
@@ -103,6 +106,9 @@ if __name__ == '__main__':
             else:
                 tot_data.append(read_data[0, :])
 
+            if tot_data[-1][0] < 0.1:
+                indices.append(test_nn)
+
         tot_data = np.stack(tot_data, axis=0)
         print('Reading testing results of DATA {}: Output window {} of Node {} wrt total nodes - {}'.format(
             args.index, 2, nn, tot_data.shape))
@@ -111,3 +117,6 @@ if __name__ == '__main__':
         pd.set_option('display.max_columns', None)
         df = pd.DataFrame(tot_data, index=range(len(tot_data)))
         print(df)
+
+        visualize_sensor(args.dataset, nn, indices, f'tmp_{nn}_sig.html')
+        visualize_sensor(args.dataset, nn, list(set(range(sensors)).difference(indices)), f'tmp_{nn}_insig.html')
