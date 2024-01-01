@@ -13,7 +13,7 @@ def visualize_sensor(dataset, key_index=None, indices=None, filename=None, ext=N
         df.insert(0, 'index', len(df), allow_duplicates=False)
 
     if indices is None:
-        indices = len(df)
+        indices = range(len(df))
 
     mean_latitude = df['latitude'].mean()
     mean_longitude = df['longitude'].mean()

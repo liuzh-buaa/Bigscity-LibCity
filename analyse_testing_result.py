@@ -55,7 +55,7 @@ if __name__ == '__main__':
     plt.rc('font', family='Times New Roman', size=20)
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, default='METR_LA', choices=['METR_LA', 'PEMS_BAY'])
-    parser.add_argument('--index', type=int, default=183)
+    parser.add_argument('--index', type=int, default=1)
     parser.add_argument('--ow', type=int, default=2, help='output window')
     parser.add_argument('--nn', type=int, default=0, help='node number')
     parser.add_argument('--od', type=int, default=0, help='output dim')
@@ -119,4 +119,4 @@ if __name__ == '__main__':
         print(df)
 
         visualize_sensor(args.dataset, nn, indices, f'tmp_{nn}_sig.html')
-        visualize_sensor(args.dataset, nn, list(set(range(sensors)).difference(indices)), f'tmp_{nn}_insig.html')
+        visualize_sensor(args.dataset, nn, list(set(range(sensors)).difference(indices)) + [nn], f'tmp_{nn}_insig.html')
