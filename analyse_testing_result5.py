@@ -44,4 +44,4 @@ if __name__ == '__main__':
     max_value = max(ext.values())
     normalized_ext = {key: value / max_value for key, value in ext.items()}
 
-    visualize_sensor_varying('METR_LA', args.test_nn, filename=f'{res_dir}/significance.html', ext=ext)
+    visualize_sensor_varying('METR_LA', -1, filename=f'{res_dir}/significance.html', ext=ext)
