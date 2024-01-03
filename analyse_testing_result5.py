@@ -33,6 +33,9 @@ if __name__ == '__main__':
         assert os.path.exists(testing_res_dir)
         for nn in range(sensors):
             for test_nn in range(sensors):
+                if test_nn == nn:
+                    continue
+
                 filename = 'ps_testing_{}_{}_{}_{}_{}.npy'.format(index, 2, nn, args.od, test_nn)
                 read_data = np.load(os.path.join(testing_res_dir, filename))
 
