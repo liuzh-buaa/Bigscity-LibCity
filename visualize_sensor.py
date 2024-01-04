@@ -10,7 +10,7 @@ def visualize_sensor(dataset, key_index=None, indices=None, filename=None, ext=N
     else:
         filepath = 'libcity/cache/graph_sensor_locations_bay.csv'
         df = pd.read_csv(filepath, names=['sensor_id', 'latitude', 'longitude'])
-        df.insert(0, 'index', len(df), allow_duplicates=False)
+        df.insert(0, 'index', range(len(df)), allow_duplicates=False)
 
     if indices is None:
         indices = range(len(df))

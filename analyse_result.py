@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from analyse_testing_result import get_datetime
 from libcity.config import ConfigParser
 from libcity.utils import get_logger, ensure_dir, get_local_time
 
@@ -27,7 +28,7 @@ if __name__ == '__main__':
     # load config
     config = ConfigParser(task, model_name, dataset_name, saved_model=False, train=False)
     config['exp_id'] = exp_id
-    config['batch_size'] = 256
+    config['batch_size'] = 288  # 24h=24*60/5
     # logger
     logger = get_logger(config)
     logger.info('Begin analyzing result, task={}, model_name={}, dataset_name={}, exp_id={}'.
@@ -60,8 +61,18 @@ if __name__ == '__main__':
     assert outputs.shape == sigmas.shape
     evaluate_rep, num_data, output_window, num_nodes, output_dim = outputs.shape
     prediction, truth, outputs, sigmas = prediction[..., 0], truth[..., 0], outputs[..., 0], sigmas[..., 0]
-    for i in range(10):
+
+    if dataset_name == 'METR_LA':
+        nodes_list = [0, 1, 9, 10, 54, 21, 26, 35, 50, 121]
+    elif dataset_name == 'PEMS_BAY':
+        nodes_list = [2, 4, 8, 57, 188, 113, 212, 258]
+    else:
+        raise NotImplementedError(f'No such dataset of {dataset_name}.')
+
+    for i in nodes_list:
         logger.info(f'Analyzing node {i}...')
+        t_dir = '{}/{}'.format(images_cache_dir, i)
+        ensure_dir(t_dir)
         # (num_data, output_window), (evaluate_rep, num_data, output_window)
         prediction_node, truth_node, outputs_node, sigmas_node = prediction[:, :, i], truth[:, :, i], \
             outputs[:, :, :, i], sigmas[:, :, :, i]
@@ -85,16 +96,31 @@ if __name__ == '__main__':
             columns_name.extend(['sigma_{}'.format(i) for i in range(5)])
             pd_data = pd.DataFrame(res, columns=columns_name)
             pd_data.to_excel(writer, sheet_name=time, float_format='%.4f')
-            for k in range(0, num_data, batch_size):
-                t_num = min(batch_size, num_data - k)
+            if j == 2:
+                start = 235 if dataset_name == 'METR_LA' else 60  # 2012-06-05 00:00:00 / 2017-05-26 00:00:00
+            elif j == 5:
+                start = 232 if dataset_name == 'METR_LA' else 57
+            elif j == 11:
+                start = 226 if dataset_name == 'METR_LA' else 51
+            else:
+                raise NotImplementedError(f'No such timestamp of {j}')
+            for k in range(start, num_data, batch_size):
+                t_num = min(batch_size + 1, num_data - k)
+                if t_num < batch_size + 1:
+                    continue
                 x = np.arange(k, k + t_num)
                 mask = np.where(t[k: k + t_num], 1, 0)
+                plt.xlim(k, k + t_num - 1)
+                plt.xticks(np.arange(k, k + t_num, 36), [get_datetime(dataset_name, k, j, fmt='%H:%M\n%b-%d')] +
+                           [f'{_}:00' for _ in range(3, 24, 3)] +
+                           [get_datetime(dataset_name, k + t_num - 1, j, fmt='%H:%M\n%b-%d')])
+                plt.ylabel('mile/h')
                 plt.plot(x, np.abs(error[k:k + t_num]) * mask, label='|error|')
                 plt.plot(x, a_uncertainty[k:k + t_num] * mask, label='a_uncertainty')
                 plt.plot(x, e_uncertainty[k:k + t_num] * mask, label='e_uncertainty')
                 plt.plot(x, uncertainty[k:k + t_num] * mask, label='uncertainty')
-                plt.legend()
-                plt.savefig(f'{images_cache_dir}/{dataset_name}_node_{i}_batch_{k // batch_size}_{time}.svg',
+                plt.legend(labelspacing=0.05)
+                plt.savefig(f'{t_dir}/{dataset_name}_node_{i}_batch_{k // batch_size}_{time}.svg',
                             bbox_inches='tight')
                 plt.close()
         writer.close()

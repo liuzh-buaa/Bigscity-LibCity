@@ -4,12 +4,44 @@
 """
 import argparse
 import os.path
+from datetime import datetime, timedelta
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from visualize_sensor import visualize_sensor
+
+
+def get_datetime(dataset, index, output_window=2, fmt=None):
+    if dataset == 'METR_LA':
+        if output_window == 2:
+            base_time = datetime(2012, 6, 4, 4, 25)  # 初始时间
+        elif output_window == 5:
+            base_time = datetime(2012, 6, 4, 4, 40)  # 初始时间
+        elif output_window == 11:
+            base_time = datetime(2012, 6, 4, 5, 10)  # 初始时间
+        else:
+            raise NotImplementedError(f'No such output_window support.')
+    elif dataset == 'PEMS_BAY':
+        if output_window == 2:
+            base_time = datetime(2017, 5, 25, 19, 00)  # 初始时间
+        elif output_window == 5:
+            base_time = datetime(2017, 5, 25, 19, 15)  # 初始时间
+        elif output_window == 11:
+            base_time = datetime(2017, 5, 25, 19, 45)  # 初始时间
+        else:
+            raise NotImplementedError(f'No such output_window support.')
+    else:
+        raise NotImplementedError(f'No such dataset of {dataset}.')
+
+    time_interval = timedelta(minutes=5)  # 时间间隔为5分钟
+    result_time = base_time + index * time_interval  # 计算结果时间
+
+    if fmt is None:
+        return result_time.strftime('%Y-%m-%d %H:%M')  # 格式化输出字符串
+    else:
+        return result_time.strftime(fmt)  # 格式化输出字符串
 
 
 def get_exp_id(data, index):
@@ -32,8 +64,16 @@ def get_exp_id(data, index):
             return 72874
         elif index < 54:
             return 27302
-        elif index < 175:
+        elif index < 152:
             raise NotImplementedError()
+        elif index < 158:
+            return 31246
+        elif index < 164:
+            return 3555
+        elif index < 170:
+            return 5112
+        elif index < 175:
+            return 36239
         elif index < 182:
             return 21982
         elif index < 188:

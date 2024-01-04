@@ -94,4 +94,5 @@ def explore_h5_file(filepath):
 
 if __name__ == '__main__':
     # explore_h5_file('raw_data/PEMS_BAY/pems-bay.h5')
-    read_h5_file()
+    # read_h5_file()
+    print([f'{_:02d}:00' for _ in range(3, 24, 3)])
