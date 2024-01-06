@@ -38,7 +38,7 @@ def visualize_sensor(dataset, key_index=None, indices=None, filename=None, ext=N
         m.save(filename)
 
 
-def visualize_sensor_varying(dataset, key_index, filename=None, ext=None):
+def visualize_sensor_varying(dataset, key_index, filename=None, ext=None, adjust=False):
     if dataset.lower() == 'metr_la':
         filepath = f'libcity/cache/graph_sensor_locations.csv'
         df = pd.read_csv(filepath)
@@ -50,7 +50,15 @@ def visualize_sensor_varying(dataset, key_index, filename=None, ext=None):
     mean_latitude = df['latitude'].mean()
     mean_longitude = df['longitude'].mean()
 
-    colormap = folium.LinearColormap(colors=['#C0C0FF', '#0000FF'], vmin=0, vmax=1)
+    if adjust:
+        sorted_items = sorted(ext.items(), key=lambda x: x[1])
+        minVal = 1.1 * sorted_items[1][1] - 0.1 * sorted_items[-1][1]
+        assert minVal > 0, f'diff={sorted_items[-1][1]}-{sorted_items[1][1]}'
+        ext[sorted_items[0][0]] = minVal
+        diff = max(ext.values()) - minVal
+        ext = {key: 1 - (value - minVal) / diff for key, value in ext.items()}
+
+    colormap = folium.LinearColormap(colors=['blue', 'red'], vmin=min(ext.values()), vmax=max(ext.values()))
     m = folium.Map(location=(mean_latitude, mean_longitude), zoom_start=12)
 
     for data in df.iterrows():
@@ -59,12 +67,19 @@ def visualize_sensor_varying(dataset, key_index, filename=None, ext=None):
         tmp_longitude = data[1]['longitude']
         tmp_sensor_id = int(data[1]['sensor_id'])
         if tmp_index == key_index:
-            folium.Marker(location=(tmp_latitude, tmp_longitude), tooltip=f'{tmp_index}',
-                          popup=f'{tmp_sensor_id}:({tmp_latitude},{tmp_longitude})',
-                          icon=folium.Icon(color='red')).add_to(m)
+            # folium.Marker(location=(tmp_latitude, tmp_longitude), tooltip=f'{tmp_index}',
+            #               popup=f'{tmp_sensor_id}:({tmp_latitude},{tmp_longitude})',
+            #               icon=folium.Icon(color='red')).add_to(m)
+            folium.CircleMarker(location=[tmp_latitude, tmp_longitude],
+                                radius=10,
+                                color='blue',
+                                fill=True,
+                                fill_color='blue',
+                                fill_opacity=1,
+                                popup=f'{tmp_sensor_id}:({tmp_latitude},{tmp_longitude})').add_to(m)
         else:
             folium.CircleMarker(location=[tmp_latitude, tmp_longitude],
-                                radius=8,
+                                radius=10,
                                 color=colormap(ext[tmp_index]),
                                 fill=True,
                                 fill_color=colormap(ext[tmp_index]),
@@ -72,7 +87,7 @@ def visualize_sensor_varying(dataset, key_index, filename=None, ext=None):
                                 popup=f'{tmp_sensor_id}:({tmp_latitude},{tmp_longitude})').add_to(m)
 
     # Add LinearColormap to the map
-    colormap.caption = 'Testing result'
+    colormap.caption = 'Bayesian Evidence'
     m.add_child(colormap)
 
     # Add LayerControl to show/hide the color bar
