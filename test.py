@@ -92,6 +92,18 @@ def explore_h5_file(filepath):
         explore(file)
 
 
+def read_samples():
+    exp_id = 11529
+    index = 0
+    output_window = 2
+    node = 0
+    output_dim = 0
+    filename = 'gradient_samples_{}_{}_{}_{}.npy'.format(index, output_window, node, output_dim)
+    data = np.load(f'libcity/cache/{exp_id}/testing_cache/{filename}')
+    print(data)
+
+
 if __name__ == '__main__':
-    explore_h5_file('raw_data/PEMS_BAY/pems-bay.h5')
-    read_h5_file()
+    # explore_h5_file('raw_data/PEMS_BAY/pems-bay.h5')
+    # read_h5_file()
+    read_samples()

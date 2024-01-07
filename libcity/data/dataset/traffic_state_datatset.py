@@ -66,6 +66,8 @@ class TrafficStateDataset(AbstractDataset):
         self.weight_adj_epsilon = self.config.get('weight_adj_epsilon', 0.1)
         self.distance_inverse = self.config.get('distance_inverse', False)
 
+        self.delete_nodes = []
+
         # 初始化
         self.data = None
         self.feature_name = {'X': 'float', 'y': 'float'}  # 此类的输入只有X和y
@@ -201,6 +203,13 @@ class TrafficStateDataset(AbstractDataset):
                         self.adj_mx[index][nei_index] = 1
                         self.adj_mx[nei_index][index] = 1
         self._logger.info("Generate grid rel file, shape=" + str(self.adj_mx.shape))
+
+    def delete_node_adjacency_matrix(self):
+        assert self.adj_mx.shape == (207, 207)
+        for index in self.delete_nodes:
+            self._logger.warning(f'Deleting adjacency of node {index}...')
+            self.adj_mx[:, index] = np.inf
+            self.adj_mx[index, :] = np.inf
 
     def _calculate_adjacency_matrix(self):
         """
@@ -922,13 +931,12 @@ class TrafficStateDataset(AbstractDataset):
             raise ValueError('Scaler type error!')
         return scaler
 
-    def delete_node(self, x_train, y_train, x_val, y_val, x_test, y_test):
+    def delete_node_data(self, x_train, y_train, x_val, y_val, x_test, y_test):
         assert x_train.shape == y_train.shape and y_train.shape == (23974, 12, 207, 2)
         assert x_val.shape == y_val.shape and y_val.shape == (3425, 12, 207, 2)
         assert x_test.shape == y_test.shape and y_test.shape == (6850, 12, 207, 2)
-        indices = [26, 126]
-        for index in indices:
-            self._logger.info(f'Deleting node {index}...')
+        for index in self.delete_nodes:
+            self._logger.warning(f'Deleting data of node {index}...')
             x_train[:, :, index, :] = 0
             y_train[:, :, index, :] = 0
             x_val[:, :, index, :] = 0
@@ -955,8 +963,9 @@ class TrafficStateDataset(AbstractDataset):
                 x_train, y_train, x_val, y_val, x_test, y_test = self._load_cache_train_val_test()
             else:
                 x_train, y_train, x_val, y_val, x_test, y_test = self._generate_train_val_test()
+        x_train, y_train, x_val, y_val, x_test, y_test = self.delete_node_data(
+            x_train, y_train, x_val, y_val, x_test, y_test)
         # 数据归一化
-        # x_train, y_train, x_val, y_val, x_test, y_test = self.delete_node(x_train, y_train, x_val, y_val, x_test, y_test)
         self.feature_dim = x_train.shape[-1]
         self.ext_dim = self.feature_dim - self.output_dim
         self.scaler = self._get_scalar(self.scaler_type,
