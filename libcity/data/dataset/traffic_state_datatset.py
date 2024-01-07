@@ -221,6 +221,7 @@ class TrafficStateDataset(AbstractDataset):
             np.ndarray: self.adj_mx, N*N的邻接矩阵
         """
         self._logger.info("Start Calculate the weight by Gauss kernel!")
+        self.delete_node_adjacency_matrix()
         distances = self.adj_mx[~np.isinf(self.adj_mx)].flatten()
         std = distances.std()
         self.adj_mx = np.exp(-np.square(self.adj_mx / std))

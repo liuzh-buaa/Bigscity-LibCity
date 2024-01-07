@@ -173,9 +173,12 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 36239-BDCRNNVariableDecoder-METR_LA-Jan-02-2024_13-43-54.log (170-174) (l27585-l27589) (18:35-18:55)
 21982-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_14-46-39.log (175-181) (l27590-l27596) (19:00-19:30)
 57707-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_14-47-31.log (182-187) (l27597-l27602) (19:35-20:00)
-51066-BDCRNNVariableDecoder-METR_LA-Jan-06-2024_14-35-21.log delete node 26 (5.32)
-86188-BDCRNNVariableDecoder-METR_LA-Jan-06-2024_14-41-15.log delete node 126 ()
-82923-BDCRNNVariableDecoder-METR_LA-Jan-06-2024_14-42-00.log delete node 26, 126 (5.30)
+51066-BDCRNNVariableDecoder-METR_LA-Jan-06-2024_14-35-21.log delete node 26  data (5.32)
+86188-BDCRNNVariableDecoder-METR_LA-Jan-06-2024_14-41-15.log delete node 126 data ()
+82923-BDCRNNVariableDecoder-METR_LA-Jan-06-2024_14-42-00.log delete node 26, 126 data (5.30)
+38420-BDCRNNVariableDecoder-METR_LA-Jan-07-2024_12-48-25.log delete node 26 data and adj
+92103-BDCRNNVariableDecoder-METR_LA-Jan-07-2024_12-51-00.log delete node 126 data and adj
+95143-BDCRNNVariableDecoder-METR_LA-Jan-07-2024_12-52-17.log delete node 26, 126 data and adj
 
 11522-DCRNNDropout-METR_LA-Dec-02-2023_16-27-01.log (5.37)
 
