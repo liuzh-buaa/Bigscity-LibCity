@@ -922,6 +922,21 @@ class TrafficStateDataset(AbstractDataset):
             raise ValueError('Scaler type error!')
         return scaler
 
+    def delete_node(self, x_train, y_train, x_val, y_val, x_test, y_test):
+        assert x_train.shape == y_train.shape and y_train.shape == (23974, 12, 207, 2)
+        assert x_val.shape == y_val.shape and y_val.shape == (3425, 12, 207, 2)
+        assert x_test.shape == y_test.shape and y_test.shape == (6850, 12, 207, 2)
+        indices = [26, 126]
+        for index in indices:
+            self._logger.info(f'Deleting node {index}...')
+            x_train[:, :, index, :] = 0
+            y_train[:, :, index, :] = 0
+            x_val[:, :, index, :] = 0
+            y_val[:, :, index, :] = 0
+            x_test[:, :, index, :] = 0
+            y_test[:, :, index, :] = 0
+        return x_train, y_train, x_val, y_val, x_test, y_test
+
     def get_data(self):
         """
         返回数据的DataLoader，包括训练数据、测试数据、验证数据
@@ -941,6 +956,7 @@ class TrafficStateDataset(AbstractDataset):
             else:
                 x_train, y_train, x_val, y_val, x_test, y_test = self._generate_train_val_test()
         # 数据归一化
+        # x_train, y_train, x_val, y_val, x_test, y_test = self.delete_node(x_train, y_train, x_val, y_val, x_test, y_test)
         self.feature_dim = x_train.shape[-1]
         self.ext_dim = self.feature_dim - self.output_dim
         self.scaler = self._get_scalar(self.scaler_type,

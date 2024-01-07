@@ -139,6 +139,7 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 34773-DCRNN-METR_LA-Oct-30-2023_14-32-19.log shuffle=False learning_rate=0.001 (5.76)
 28632-DCRNN-METR_LA-Oct-30-2023_14-33-20.log shuffle=False learning_rate=0.005 max_norm=1 (5.40)
 35510-DCRNN-METR_LA-Oct-31-2023_02-58-18.log shuffle=False learning_rate=0.005 lr_decay_ratio=0.5 (5.30)
+33514-DCRNN-METR_LA-Jan-06-2024_14-36-41.log shuffle=True delete node 26 (5.22)
 
 52984-BDCRNNVariableDecoderShared-METR_LA-Oct-29-2023_15-15-52.log shuffle=True sigma_pi=sigma_sigma_pi=1, sigma_start=sigma_sigma_start=0.01 (5.44)
 56441-BDCRNNVariableDecoderShared-METR_LA-Oct-29-2023_15-17-09.log shuffle=True sigma_pi=sigma_sigma_pi=sigma_start=sigma_sigma_start=1 (30.23)
@@ -172,6 +173,9 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 36239-BDCRNNVariableDecoder-METR_LA-Jan-02-2024_13-43-54.log (170-174) (l27585-l27589) (18:35-18:55)
 21982-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_14-46-39.log (175-181) (l27590-l27596) (19:00-19:30)
 57707-BDCRNNVariableDecoder-METR_LA-Dec-28-2023_14-47-31.log (182-187) (l27597-l27602) (19:35-20:00)
+51066-BDCRNNVariableDecoder-METR_LA-Jan-06-2024_14-35-21.log delete node 26 (5.32)
+86188-BDCRNNVariableDecoder-METR_LA-Jan-06-2024_14-41-15.log delete node 126 ()
+82923-BDCRNNVariableDecoder-METR_LA-Jan-06-2024_14-42-00.log delete node 26, 126 (5.30)
 
 11522-DCRNNDropout-METR_LA-Dec-02-2023_16-27-01.log (5.37)
 
