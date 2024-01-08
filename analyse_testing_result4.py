@@ -53,4 +53,4 @@ if __name__ == '__main__':
             else:
                 ext[test_nn] = read_data[0, args.input_dim]
 
-    visualize_sensor_varying('METR_LA', args.nn, filename=f'{res_dir}/{args.nn}_{args.index}.html', ext=ext)
+    visualize_sensor_varying('METR_LA', args.nn, ext, filename=f'{res_dir}/{args.nn}_{args.index}.html')

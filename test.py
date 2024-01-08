@@ -106,4 +106,7 @@ def read_samples():
 if __name__ == '__main__':
     # explore_h5_file('raw_data/PEMS_BAY/pems-bay.h5')
     # read_h5_file()
-    read_samples()
+    # read_samples()
+    df = pd.read_csv('raw_data/METR_LA/1.csv')
+    nd = np.array(df)
+    print('ok')

@@ -78,6 +78,16 @@ def get_exp_id(data, index):
             return 21982
         elif index < 188:
             return 57707
+        elif index < 235:
+            raise NotImplementedError()
+        elif index < 240:
+            return 67445    # note test based on the mean of (speed and time)
+        elif index < 245:
+            return 31478    # note test based on the mean of (speed and time)
+        elif index < 250:
+            return 29188    # note test based on the mean of (speed and time)
+        elif index < 255:
+            return 72032    # note test based on the mean of (speed and time)
         else:
             raise NotImplementedError(f'Have not testing index {index} of {data}')
     elif data == 'PEMS_BAY':

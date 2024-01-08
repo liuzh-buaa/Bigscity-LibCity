@@ -63,7 +63,7 @@ if __name__ == '__main__':
             np.save(f'{ext_filename}', ext)
             print(f'Saving ext to {ext_filename}.')
         ll.append(ext)
-        visualize_sensor_varying('METR_LA', -1, filename=f'{res_dir}/significance_{index}.html', ext=ext, adjust=True)
+        visualize_sensor_varying('METR_LA', -1, ext, filename=f'{res_dir}/significance_{index}.html', adjust=True)
         print(f'Finish visualize index {index}.')
 
     ext_filename = f'{res_dir}/ext.npy'
@@ -72,5 +72,5 @@ if __name__ == '__main__':
     else:
         ext = {sensor: sum([ext_l[sensor] for ext_l in ll]) for sensor in range(sensors)}
         np.save(f'{ext_filename}', ext)
-    visualize_sensor_varying('METR_LA', -1, filename=f'{res_dir}/significance.html', ext=ext, adjust=True)
+    visualize_sensor_varying('METR_LA', -1, ext, filename=f'{res_dir}/significance.html', adjust=True)
     print(f'Finish visualize.')
