@@ -46,7 +46,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, default='METR_LA', choices=['METR_LA', 'PEMS_BAY'])
     parser.add_argument('--index', type=int, default=0)
-    parser.add_argument('--nn', type=int, default=47, help='node number')
+    parser.add_argument('--nn', type=int, default=184, help='node number')
     parser.add_argument('--od', type=int, default=0, help='output dim')
     parser.add_argument('--output_window', type=int, default=2, choices=[2, 5, 11])
     parser.add_argument('--input_dim', type=int, default=0, choices=[0, 1, -1, -2])
@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
     speeds_dir = f'raw_data/METR_LA'
 
-    for args.index in range(0, 20):
+    for args.index in range(0, 10):
         for args.output_window in [2, 5, 11]:
             exp_id = get_exp_id(args.dataset, args.index)
 
