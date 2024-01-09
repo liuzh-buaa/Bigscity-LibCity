@@ -66,7 +66,9 @@ class TrafficStateDataset(AbstractDataset):
         self.weight_adj_epsilon = self.config.get('weight_adj_epsilon', 0.1)
         self.distance_inverse = self.config.get('distance_inverse', False)
 
-        self.delete_nodes = []
+        # self.deleteIndex2Geoids = {26: 717804}
+        # self.deleteIndex2Geoids = {126: 769867}
+        self.deleteIndex2Geoids = {}
 
         # 初始化
         self.data = None
@@ -88,12 +90,18 @@ class TrafficStateDataset(AbstractDataset):
         else:
             self.adj_mx = np.zeros((len(self.geo_ids), len(self.geo_ids)), dtype=np.float32)
 
+    def delete_geo_ids(self):
+        for geo_id in self.deleteIndex2Geoids.values():
+            self._logger.warning(f'Deleting node of geo_id={geo_id}...')
+            self.geo_ids.remove(geo_id)
+
     def _load_geo(self):
         """
         加载.geo文件，格式[geo_id, type, coordinates, properties(若干列)]
         """
         geofile = pd.read_csv(self.data_path + self.geo_file + '.geo')
         self.geo_ids = list(geofile['geo_id'])
+        self.delete_geo_ids()
         self.num_nodes = len(self.geo_ids)
         self.geo_to_ind = {}
         self.ind_to_geo = {}
@@ -221,7 +229,6 @@ class TrafficStateDataset(AbstractDataset):
             np.ndarray: self.adj_mx, N*N的邻接矩阵
         """
         self._logger.info("Start Calculate the weight by Gauss kernel!")
-        self.delete_node_adjacency_matrix()
         distances = self.adj_mx[~np.isinf(self.adj_mx)].flatten()
         std = distances.std()
         self.adj_mx = np.exp(-np.square(self.adj_mx / std))
@@ -936,14 +943,15 @@ class TrafficStateDataset(AbstractDataset):
         assert x_train.shape == y_train.shape and y_train.shape == (23974, 12, 207, 2)
         assert x_val.shape == y_val.shape and y_val.shape == (3425, 12, 207, 2)
         assert x_test.shape == y_test.shape and y_test.shape == (6850, 12, 207, 2)
-        for index in self.delete_nodes:
-            self._logger.warning(f'Deleting data of node {index}...')
-            x_train[:, :, index, :] = 0
-            y_train[:, :, index, :] = 0
-            x_val[:, :, index, :] = 0
-            y_val[:, :, index, :] = 0
-            x_test[:, :, index, :] = 0
-            y_test[:, :, index, :] = 0
+        self._logger.warning(f'Deleting data of index={self.deleteIndex2Geoids.keys()}...')
+        assert x_train.shape[2] == 207
+        t = [_ for _ in range(207) if _ not in self.deleteIndex2Geoids.keys()]
+        x_train = x_train[:, :, t, :]
+        x_test = x_test[:, :, t, :]
+        x_val = x_val[:, :, t, :]
+        y_val = y_val[:, :, t, :]
+        y_train = y_train[:, :, t, :]
+        y_test = y_test[:, :, t, :]
         return x_train, y_train, x_val, y_val, x_test, y_test
 
     def get_data(self):
