@@ -69,6 +69,8 @@ class TrafficStateDataset(AbstractDataset):
         # self.deleteIndex2Geoids = {26: 717804}
         # self.deleteIndex2Geoids = {126: 769867}
         # self.deleteIndex2Geoids = {26: 717804, 126: 769867}
+        # self.deleteIndex2Geoids = {158: 764794, 9: 717816, 131: 765099, 146: 717502}
+        # self.deleteIndex2Geoids = {61: 773939, 72: 717492, 190: 764858, 205: 718141}
         self.deleteIndex2Geoids = {}
 
         # 初始化
