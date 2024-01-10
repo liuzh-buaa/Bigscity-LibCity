@@ -1,6 +1,8 @@
 # https://blog.csdn.net/qq_40206371/article/details/134698358
 import folium
 import pandas as pd
+from matplotlib import pyplot as plt
+from matplotlib.colors import to_hex
 
 
 def visualize_sensor(dataset, key_index=None, indices=None, filename=None, ext=None):
@@ -98,7 +100,7 @@ def visualize_sensor_marked(dataset, key_index, filename=None, ext=None, scaled=
         m.save(filename)
 
 
-def visualize_sensor_varying(dataset, key_index, ext, filename=None, adjust=False, scaled=None, speeds=None):
+def visualize_sensor_varying(dataset, key_index, ext, filename=None, adjust=False, scaled=None, speeds=None, normalized=False):
     if dataset.lower() == 'metr_la':
         filepath = f'libcity/cache/graph_sensor_locations.csv'
         df = pd.read_csv(filepath)
@@ -139,7 +141,20 @@ def visualize_sensor_varying(dataset, key_index, ext, filename=None, adjust=Fals
         for i in range(scaled_n, n - scaled_n):
             ext[sorted_items[i][0]] = (sorted_items[i][1] - minVal) / (maxVal - minVal)
 
-    colormap = folium.LinearColormap(colors=['blue', 'red'], vmin=min(ext.values()), vmax=max(ext.values()))
+    if normalized:
+        minVal = min(ext.values())
+        maxVal = max(ext.values())
+        for k, v in ext.items():
+            ext[k] = (v - minVal) / (maxVal - minVal) + minVal
+
+    # 获取Viridis颜色映射的颜色列表
+    viridis_colors = [to_hex(c) for c in plt.cm.viridis(range(256))]
+    plasma_colors = [to_hex(c) for c in plt.cm.plasma(range(256))]
+    inferno_colors = [to_hex(c) for c in plt.cm.inferno(range(256))]
+    magma_colors = [to_hex(c) for c in plt.cm.magma(range(256))]
+    # 创建颜色映射，使用Viridis颜色映射
+    colormap = folium.LinearColormap(colors=viridis_colors, vmin=min(ext.values()), vmax=max(ext.values()))
+    # colormap = folium.LinearColormap(colors=['blue', 'red'], vmin=min(ext.values()), vmax=max(ext.values()))
     m = folium.Map(location=(mean_latitude, mean_longitude), zoom_start=12)
 
     for data in df.iterrows():
