@@ -8,9 +8,11 @@ import os.path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import torch
 
 from analyse_testing_result import get_datetime
 from libcity.config import ConfigParser
+from libcity.model import loss
 from libcity.utils import get_logger, ensure_dir, get_local_time
 
 if __name__ == '__main__':
@@ -63,11 +65,13 @@ if __name__ == '__main__':
     prediction, truth, outputs, sigmas = prediction[..., 0], truth[..., 0], outputs[..., 0], sigmas[..., 0]
 
     if dataset_name == 'METR_LA':
-        nodes_list = [0, 1, 9, 10, 54, 21, 26, 35, 50, 121]
+        nodes_list = [181, 149]
     elif dataset_name == 'PEMS_BAY':
         nodes_list = [2, 4, 8, 57, 188, 113, 212, 258]
     else:
         raise NotImplementedError(f'No such dataset of {dataset_name}.')
+
+    metrics = ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'MAE', 'MSE', 'RMSE', 'MAPE']
 
     for i in nodes_list:
         logger.info(f'Analyzing node {i}...')
@@ -76,6 +80,33 @@ if __name__ == '__main__':
         # (num_data, output_window), (evaluate_rep, num_data, output_window)
         prediction_node, truth_node, outputs_node, sigmas_node = prediction[:, :, i], truth[:, :, i], \
             outputs[:, :, :, i], sigmas[:, :, :, i]
+        output_res = np.zeros((12, 8))
+        for j in range(12):
+            for k, metric in enumerate(metrics):
+                if metric == 'masked_MAE':
+                    output_res[j, k] = loss.masked_mae_torch(torch.Tensor(prediction_node[:, j - 1]), torch.Tensor(truth_node[:, j - 1]), 0).item()
+                elif metric == 'masked_MSE':
+                    output_res[j, k] = loss.masked_mse_torch(torch.Tensor(prediction_node[:, j - 1]), torch.Tensor(truth_node[:, j - 1]), 0).item()
+                elif metric == 'masked_RMSE':
+                    output_res[j, k] = loss.masked_rmse_torch(torch.Tensor(prediction_node[:, j - 1]), torch.Tensor(truth_node[:, j - 1]), 0).item()
+                elif metric == 'masked_MAPE':
+                    output_res[j, k] = loss.masked_mape_torch(torch.Tensor(prediction_node[:, j - 1]), torch.Tensor(truth_node[:, j - 1]), 0).item()
+                elif metric == 'MAE':
+                    output_res[j, k] = loss.masked_mae_torch(torch.Tensor(prediction_node[:, j - 1]), torch.Tensor(truth_node[:, j - 1])).item()
+                elif metric == 'MSE':
+                    output_res[j, k] = loss.masked_mse_torch(torch.Tensor(prediction_node[:, j - 1]), torch.Tensor(truth_node[:, j - 1])).item()
+                elif metric == 'RMSE':
+                    output_res[j, k] = loss.masked_rmse_torch(torch.Tensor(prediction_node[:, j - 1]), torch.Tensor(truth_node[:, j - 1])).item()
+                elif metric == 'MAPE':
+                    output_res[j, k] = loss.masked_mape_torch(torch.Tensor(prediction_node[:, j - 1]), torch.Tensor(truth_node[:, j - 1])).item()
+        df = pd.DataFrame(output_res, columns=metrics)
+        # 显示所有列
+        pd.set_option('display.max_columns', None)
+        # 显示所有行
+        pd.set_option('display.max_rows', None)
+        # 设置value的显示长度为100，默认为50
+        pd.set_option('max_colwidth', 100)
+        logger.info(df)
         sigmas_node_2 = sigmas_node * sigmas_node
         outputs_node_2 = outputs_node * outputs_node
         prediction_node_2 = prediction_node * prediction_node
