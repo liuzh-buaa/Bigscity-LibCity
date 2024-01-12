@@ -155,7 +155,7 @@ def visualize_sensor_varying(dataset, key_index, ext, filename=None, adjust=Fals
     # 创建颜色映射，使用Viridis颜色映射
     colormap = folium.LinearColormap(colors=viridis_colors, vmin=min(ext.values()), vmax=max(ext.values()))
     # colormap = folium.LinearColormap(colors=['blue', 'red'], vmin=min(ext.values()), vmax=max(ext.values()))
-    m = folium.Map(location=(mean_latitude, mean_longitude), zoom_start=12)
+    m = folium.Map(location=(mean_latitude, mean_longitude), zoom_start=13)
 
     for data in df.iterrows():
         tmp_index = int(data[1]['index'])
@@ -166,9 +166,20 @@ def visualize_sensor_varying(dataset, key_index, ext, filename=None, adjust=Fals
             print(f'Jump Sensor {tmp_index}.')
             continue
         if tmp_index == key_index:
-            folium.Marker(location=(tmp_latitude, tmp_longitude), tooltip=f'{tmp_index}',
-                          popup=f'{tmp_sensor_id}={ext[tmp_index]}:({tmp_latitude},{tmp_longitude})',
-                          icon=folium.Icon(color='red')).add_to(m)
+            folium.CircleMarker(location=[tmp_latitude, tmp_longitude],
+                                radius=20,
+                                color='red',
+                                fill=True,
+                                fill_color='red',
+                                fill_opacity=1,
+                                tooltip=f'{tmp_index}',
+                                popup=f'{tmp_sensor_id}={ext[tmp_index]}:({tmp_latitude},{tmp_longitude})').add_to(m)
+
+            # folium.Marker(location=(tmp_latitude, tmp_longitude), tooltip=f'{tmp_index}',
+            #               popup=f'{tmp_sensor_id}={ext[tmp_index]}:({tmp_latitude},{tmp_longitude})',
+            #               radius=20,
+            #               icon=folium.Icon(color='red')).add_to(m)
+
             # folium.CircleMarker(location=[tmp_latitude, tmp_longitude],
             #                     radius=10,
             #                     color='blue',
@@ -180,7 +191,7 @@ def visualize_sensor_varying(dataset, key_index, ext, filename=None, adjust=Fals
         else:
             popup_content = '' if speeds is None else f':{speeds[tmp_index]}'
             folium.CircleMarker(location=[tmp_latitude, tmp_longitude],
-                                radius=10,
+                                radius=20,
                                 color=colormap(ext[tmp_index]),
                                 fill=True,
                                 fill_color=colormap(ext[tmp_index]),
