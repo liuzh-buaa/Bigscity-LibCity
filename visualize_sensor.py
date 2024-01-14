@@ -17,6 +17,9 @@ def visualize_sensor(dataset, key_index=None, indices=None, filename=None, ext=N
     if indices is None:
         indices = range(len(df))
 
+    if key_index is None:
+        key_index = []
+
     mean_latitude = df['latitude'].mean()
     mean_longitude = df['longitude'].mean()
 
@@ -24,12 +27,12 @@ def visualize_sensor(dataset, key_index=None, indices=None, filename=None, ext=N
 
     for data in df.iterrows():
         tmp_index = int(data[1]['index'])
-        if tmp_index not in indices:
+        if tmp_index not in indices and tmp_index not in key_index:
             continue
         tmp_latitude = data[1]['latitude']
         tmp_longitude = data[1]['longitude']
         tmp_sensor_id = int(data[1]['sensor_id'])
-        icon = folium.Icon(color='red') if tmp_index == key_index else None
+        icon = folium.Icon(color='red') if tmp_index in key_index else None
         testing_result = '' if ext is None else ext[tmp_index]
         folium.Marker(location=(tmp_latitude, tmp_longitude), tooltip=f'{tmp_index}',
                       popup=f'{tmp_sensor_id}={testing_result}:({tmp_latitude},{tmp_longitude})', icon=icon).add_to(m)

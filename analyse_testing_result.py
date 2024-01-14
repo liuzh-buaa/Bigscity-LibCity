@@ -168,5 +168,5 @@ if __name__ == '__main__':
         df = pd.DataFrame(tot_data, index=range(len(tot_data)))
         print(df)
 
-        visualize_sensor(args.dataset, nn, indices, f'tmp_{nn}_sig.html')
-        visualize_sensor(args.dataset, nn, list(set(range(sensors)).difference(indices)) + [nn], f'tmp_{nn}_insig.html')
+        visualize_sensor(args.dataset, [nn], indices, f'tmp_{nn}_sig.html')
+        visualize_sensor(args.dataset, [nn], list(set(range(sensors)).difference(indices)) + [nn], f'tmp_{nn}_insig.html')
