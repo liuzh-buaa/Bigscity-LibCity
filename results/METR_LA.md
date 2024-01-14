@@ -188,6 +188,14 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 85216-BDCRNNVariableDecoder-METR_LA-Jan-10-2024_12-43-05.log delete geo_id 72, 190, 205 (149 worse)
 18630-BDCRNNVariableDecoder-METR_LA-Jan-10-2024_12-47-48.log delete geo_id 61, 190, 205 (149 worse)
 12487-BDCRNNVariableDecoder-METR_LA-Jan-10-2024_12-46-19.log delete geo_id 61, 72, 190 (149 worse)
+64425-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_15-12-05.log delete geo_id 24, 53, 61, 72, 110, 194, 205
+
+80020-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_06-48-17.log delete [-3:0] of 149
+85895-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_06-49-27.log delete [-6:0] of 149
+3666-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_06-53-03.log delete [-3:0] of 181
+46527-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_06-53-50.log delete [-6:0] of 181
+99523-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_07-01-40.log delete [-3:0] of 0
+67937-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_07-02-38.log delete [-6:0] of 0
 
 67445-BDCRNNVariableDecoder-METR_LA-Jan-07-2024_15-12-21.log (235-239)
 31478-BDCRNNVariableDecoder-METR_LA-Jan-07-2024_15-13-12.log (240-244)

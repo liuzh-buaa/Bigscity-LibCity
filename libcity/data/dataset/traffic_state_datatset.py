@@ -1,8 +1,9 @@
-import os
-import pandas as pd
-import numpy as np
 import datetime
+import os
 from logging import getLogger
+
+import numpy as np
+import pandas as pd
 
 from libcity.data.dataset import AbstractDataset
 from libcity.data.utils import generate_dataloader
@@ -71,7 +72,10 @@ class TrafficStateDataset(AbstractDataset):
         # self.deleteIndex2Geoids = {26: 717804, 126: 769867}
         # self.deleteIndex2Geoids = {158: 764794, 9: 717816, 131: 765099, 146: 717502}
         # self.deleteIndex2Geoids = {61: 773939, 72: 717492, 190: 764858, 205: 718141}
+        # self.deleteIndex2Geoids = {24: 717578, 53: 716554, 61: 773939, 72: 717492, 110: 717099, 194: 759772, 205: 718141}
         self.deleteIndex2Geoids = {}
+        # self.deleteNode2Times = {0: -6}
+        self.deleteNode2Times = {}
 
         # 初始化
         self.data = None
@@ -943,18 +947,33 @@ class TrafficStateDataset(AbstractDataset):
         return scaler
 
     def delete_node_data(self, x_train, y_train, x_val, y_val, x_test, y_test):
-        assert x_train.shape == y_train.shape and y_train.shape == (23974, 12, 207, 2)
-        assert x_val.shape == y_val.shape and y_val.shape == (3425, 12, 207, 2)
-        assert x_test.shape == y_test.shape and y_test.shape == (6850, 12, 207, 2)
-        self._logger.warning(f'Deleting data of index={self.deleteIndex2Geoids.keys()}...')
-        assert x_train.shape[2] == 207
-        t = [_ for _ in range(207) if _ not in self.deleteIndex2Geoids.keys()]
-        x_train = x_train[:, :, t, :]
-        x_test = x_test[:, :, t, :]
-        x_val = x_val[:, :, t, :]
-        y_val = y_val[:, :, t, :]
-        y_train = y_train[:, :, t, :]
-        y_test = y_test[:, :, t, :]
+        if len(self.deleteIndex2Geoids) > 0:
+            assert x_train.shape == y_train.shape and y_train.shape == (23974, 12, 207, 2)
+            assert x_val.shape == y_val.shape and y_val.shape == (3425, 12, 207, 2)
+            assert x_test.shape == y_test.shape and y_test.shape == (6850, 12, 207, 2)
+            self._logger.warning(f'Deleting data of index={self.deleteIndex2Geoids.keys()}...')
+            assert x_train.shape[2] == 207
+            t = [_ for _ in range(207) if _ not in self.deleteIndex2Geoids.keys()]
+            x_train = x_train[:, :, t, :]
+            x_test = x_test[:, :, t, :]
+            x_val = x_val[:, :, t, :]
+            y_val = y_val[:, :, t, :]
+            y_train = y_train[:, :, t, :]
+            y_test = y_test[:, :, t, :]
+        return x_train, y_train, x_val, y_val, x_test, y_test
+
+    def delete_node_historical_times_data(self, x_train, y_train, x_val, y_val, x_test, y_test):
+        for node, times in self.deleteNode2Times.items():
+            assert x_train.shape == y_train.shape and y_train.shape == (23974, 12, 207, 2)
+            assert x_val.shape == y_val.shape and y_val.shape == (3425, 12, 207, 2)
+            assert x_test.shape == y_test.shape and y_test.shape == (6850, 12, 207, 2)
+            self._logger.warning(f'Deleting speed data of time [{times}:] of index={node}...')
+            x_train[:, times:, node, 0] = 0
+            y_train[:, times:, node, 0] = 0
+            x_val[:, times:, node, 0] = 0
+            y_val[:, times:, node, 0] = 0
+            x_test[:, times:, node, 0] = 0
+            y_test[:, times:, node, 0] = 0
         return x_train, y_train, x_val, y_val, x_test, y_test
 
     def get_data(self):
@@ -976,6 +995,8 @@ class TrafficStateDataset(AbstractDataset):
             else:
                 x_train, y_train, x_val, y_val, x_test, y_test = self._generate_train_val_test()
         x_train, y_train, x_val, y_val, x_test, y_test = self.delete_node_data(
+            x_train, y_train, x_val, y_val, x_test, y_test)
+        x_train, y_train, x_val, y_val, x_test, y_test = self.delete_node_historical_times_data(
             x_train, y_train, x_val, y_val, x_test, y_test)
         # 数据归一化
         self.feature_dim = x_train.shape[-1]
