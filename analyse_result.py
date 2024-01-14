@@ -65,7 +65,7 @@ if __name__ == '__main__':
     prediction, truth, outputs, sigmas = prediction[..., 0], truth[..., 0], outputs[..., 0], sigmas[..., 0]
 
     if dataset_name == 'METR_LA':
-        nodes_list = [181, 149]
+        nodes_list = [0, 149, 181]
     elif dataset_name == 'PEMS_BAY':
         nodes_list = [2, 4, 8, 57, 188, 113, 212, 258]
     else:
@@ -118,6 +118,9 @@ if __name__ == '__main__':
             a_uncertainty = 1 / evaluate_rep * np.sum(s, axis=0)
             e_uncertainty = 1 / evaluate_rep * np.sum(o2, axis=0) - p2
             uncertainty = a_uncertainty + e_uncertainty
+            logger.info(f'Masked Aleatoric={loss.masked_uncertainty_torch(torch.Tensor(a_uncertainty), torch.Tensor(t), 0).item()}, '
+                        f'Masked Epistemic={loss.masked_uncertainty_torch(torch.Tensor(e_uncertainty), torch.Tensor(t), 0).item()}, '
+                        f'Masked Uncertainty={loss.masked_uncertainty_torch(torch.Tensor(uncertainty), torch.Tensor(t), 0).item()}.')
             res = np.stack((p, t, error, uncertainty, a_uncertainty, e_uncertainty), axis=1)
             res = np.concatenate((res, o[:5].T, s[:5].T), axis=1)
             columns_name = ['pred', 'truth', 'error', 'uncertainty', 'a_uncertainty', 'e_uncertainty']
@@ -135,23 +138,23 @@ if __name__ == '__main__':
                 start = 226 if dataset_name == 'METR_LA' else 51
             else:
                 raise NotImplementedError(f'No such timestamp of {j}')
-            for k in range(start, num_data, batch_size):
-                t_num = min(batch_size + 1, num_data - k)
-                if t_num < batch_size + 1:
-                    continue
-                x = np.arange(k, k + t_num)
-                mask = np.where(t[k: k + t_num], 1, 0)
-                plt.xlim(k, k + t_num - 1)
-                plt.xticks(np.arange(k, k + t_num, 36), [get_datetime(dataset_name, k, j, fmt='%H:%M\n%b-%d')] +
-                           [f'{_}:00' for _ in range(3, 24, 3)] +
-                           [get_datetime(dataset_name, k + t_num - 1, j, fmt='%H:%M\n%b-%d')])
-                plt.ylabel('mile/h')
-                plt.plot(x, np.abs(error[k:k + t_num]) * mask, label='|error|')
-                plt.plot(x, a_uncertainty[k:k + t_num] * mask, label='a_uncertainty')
-                plt.plot(x, e_uncertainty[k:k + t_num] * mask, label='e_uncertainty')
-                plt.plot(x, uncertainty[k:k + t_num] * mask, label='uncertainty')
-                plt.legend(labelspacing=0.05)
-                plt.savefig(f'{t_dir}/{dataset_name}_node_{i}_batch_{k // batch_size}_{time}.svg',
-                            bbox_inches='tight')
-                plt.close()
+            # for k in range(start, num_data, batch_size):
+            #     t_num = min(batch_size + 1, num_data - k)
+            #     if t_num < batch_size + 1:
+            #         continue
+            #     x = np.arange(k, k + t_num)
+            #     mask = np.where(t[k: k + t_num], 1, 0)
+            #     plt.xlim(k, k + t_num - 1)
+            #     plt.xticks(np.arange(k, k + t_num, 36), [get_datetime(dataset_name, k, j, fmt='%H:%M\n%b-%d')] +
+            #                [f'{_}:00' for _ in range(3, 24, 3)] +
+            #                [get_datetime(dataset_name, k + t_num - 1, j, fmt='%H:%M\n%b-%d')])
+            #     plt.ylabel('mile/h')
+            #     plt.plot(x, np.abs(error[k:k + t_num]) * mask, label='|error|')
+            #     plt.plot(x, a_uncertainty[k:k + t_num] * mask, label='a_uncertainty')
+            #     plt.plot(x, e_uncertainty[k:k + t_num] * mask, label='e_uncertainty')
+            #     plt.plot(x, uncertainty[k:k + t_num] * mask, label='uncertainty')
+            #     plt.legend(labelspacing=0.05)
+            #     plt.savefig(f'{t_dir}/{dataset_name}_node_{i}_batch_{k // batch_size}_{time}.svg',
+            #                 bbox_inches='tight')
+            #     plt.close()
         writer.close()
