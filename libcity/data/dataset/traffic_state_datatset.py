@@ -962,19 +962,16 @@ class TrafficStateDataset(AbstractDataset):
             y_test = y_test[:, :, t, :]
         return x_train, y_train, x_val, y_val, x_test, y_test
 
-    def delete_node_historical_times_data(self, x_train, y_train, x_val, y_val, x_test, y_test):
+    def delete_node_historical_times_data(self, x_train, x_val, x_test):
         for node, times in self.deleteNode2Times.items():
-            assert x_train.shape == y_train.shape and y_train.shape == (23974, 12, 207, 2)
-            assert x_val.shape == y_val.shape and y_val.shape == (3425, 12, 207, 2)
-            assert x_test.shape == y_test.shape and y_test.shape == (6850, 12, 207, 2)
+            assert x_train.shape == (23974, 12, 207, 2)
+            assert x_val.shape == (3425, 12, 207, 2)
+            assert x_test.shape == (6850, 12, 207, 2)
             self._logger.warning(f'Deleting speed data of time [{times}:] of index={node}...')
             x_train[:, times:, node, 0] = 0
-            y_train[:, times:, node, 0] = 0
             x_val[:, times:, node, 0] = 0
-            y_val[:, times:, node, 0] = 0
             x_test[:, times:, node, 0] = 0
-            y_test[:, times:, node, 0] = 0
-        return x_train, y_train, x_val, y_val, x_test, y_test
+        return x_train, x_val, x_test
 
     def get_data(self):
         """
@@ -996,8 +993,7 @@ class TrafficStateDataset(AbstractDataset):
                 x_train, y_train, x_val, y_val, x_test, y_test = self._generate_train_val_test()
         x_train, y_train, x_val, y_val, x_test, y_test = self.delete_node_data(
             x_train, y_train, x_val, y_val, x_test, y_test)
-        x_train, y_train, x_val, y_val, x_test, y_test = self.delete_node_historical_times_data(
-            x_train, y_train, x_val, y_val, x_test, y_test)
+        x_train, x_val, x_test = self.delete_node_historical_times_data(x_train, x_val, x_test)
         # 数据归一化
         self.feature_dim = x_train.shape[-1]
         self.ext_dim = self.feature_dim - self.output_dim

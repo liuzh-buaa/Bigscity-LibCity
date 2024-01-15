@@ -190,12 +190,14 @@ python run_model.py --task traffic_state_pred --dataset METR_LA --model DCRNN --
 12487-BDCRNNVariableDecoder-METR_LA-Jan-10-2024_12-46-19.log delete geo_id 61, 72, 190 (149 worse)
 64425-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_15-12-05.log delete geo_id 24, 53, 61, 72, 110, 194, 205
 
-3666-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_06-53-03.log delete [-3:0] of 181
-46527-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_06-53-50.log delete [-6:0] of 181
-92360-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_10-11-45.log delete [-12:0] of 181
-99523-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_07-01-40.log delete [-3:0] of 0
-67937-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_07-02-38.log delete [-6:0] of 0
-20232-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_10-12-43.log delete [-12:0] of 0
+23467-BDCRNNVariableDecoder-METR_LA-Jan-15-2024_08-28-46.log delete [-3:0] of 181
+83111-BDCRNNVariableDecoder-METR_LA-Jan-15-2024_08-29-15.log delete [-6:0] of 181
+91137-BDCRNNVariableDecoder-METR_LA-Jan-15-2024_08-33-31.log delete [-12:0] of 181
+92360-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_10-11-45.log delete [-12:0] of 181 (delete y wrongly)
+87037-BDCRNNVariableDecoder-METR_LA-Jan-15-2024_08-26-05.log delete [-3:0] of 0
+22891-BDCRNNVariableDecoder-METR_LA-Jan-15-2024_08-27-06.log delete [-6:0] of 0
+85139-BDCRNNVariableDecoder-METR_LA-Jan-15-2024_08-27-41.log delete [-12:0] of 0
+20232-BDCRNNVariableDecoder-METR_LA-Jan-14-2024_10-12-43.log delete [-12:0] of 0 (delete y wrongly)
 
 67445-BDCRNNVariableDecoder-METR_LA-Jan-07-2024_15-12-21.log (235-239)
 31478-BDCRNNVariableDecoder-METR_LA-Jan-07-2024_15-13-12.log (240-244)
