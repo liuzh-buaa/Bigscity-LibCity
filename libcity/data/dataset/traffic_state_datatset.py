@@ -75,6 +75,7 @@ class TrafficStateDataset(AbstractDataset):
         # self.deleteIndex2Geoids = {24: 717578, 53: 716554, 61: 773939, 72: 717492, 110: 717099, 194: 759772, 205: 718141}
         # self.deleteIndex2Geoids = {24: 717578, 53: 716554, 61: 773939, 72: 717492, 110: 717099, 112: 716968, 194: 759772, 205: 718141}
         # self.deleteIndex2Geoids = {24: 717578, 61: 773939, 110: 717099, 112: 716968, 194: 759772, 205: 718141}
+        # self.deleteIndex2Geoids = {2: 767542, 11: 767471, 26: 717804, 108: 767454, 110: 717099, 112: 716968, 115: 717573, 126: 769867, 133: 716953, 173: 717585, 181: 717513}
         self.deleteIndex2Geoids = {}
         # self.deleteNode2Times = {0: -12}
         self.deleteNode2Times = {}
