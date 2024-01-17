@@ -5,10 +5,14 @@ from analyse_testing_result6 import get_metr_la_adjacency_matrix
 from visualize_sensor import visualize_sensor
 
 if __name__ == '__main__':
-    distance = 4000
-    threshold = 6
 
     for dataset in ['METR_LA', 'PEMS_BAY']:
+        if dataset == 'METR_LA':
+            distance = 4000
+            threshold = 6
+        else:
+            distance = 4000
+            threshold = 5
         adj_mx = get_metr_la_adjacency_matrix(dataset)
         count_below_distance0 = np.sum(adj_mx <= distance, axis=0)
         count_below_distance1 = np.sum(adj_mx <= distance, axis=1)
